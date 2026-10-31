@@ -17,7 +17,7 @@ python -m uvicorn market_app.api:app --host 127.0.0.1 --port 8000
 
 Skip migration if `exams.db` does not exist or `pilot.db` already exists. Bootstrap prints a private `otpauth://` URI for an authenticator app. Open <http://localhost:8000>. Local pilot mode shows login codes on the login screen. With `PILOT_ADMIN_CODE=2111`, the admin's second step is **2111** from this computer; without that setting, use the authenticator code. The admin manually assigns each player's verified branch.
 
-The exam creator enters every branch writing the subject and its home branches. The form assigns one start time to all listed branches; use the API for differing times. Betting closes 30 minutes before the earliest start. Players cannot see other bets, pools, or odds until settlement. Each bet is final and limited by the available balance and tier cap. An empty winning side or a void topic refunds its stakes. Losing bets show negative net scores.
+The exam creator enters every branch writing the subject and its home branches. The form assigns one start time to all listed branches; use the API for differing times. Betting closes at the earliest branch's exam start. Players cannot see other bets, pools, or odds until settlement. Each bet is final and limited by the available balance and tier cap. An empty winning side or a void topic refunds its stakes. Losing bets show negative net scores.
 
 ## Supabase as the database
 

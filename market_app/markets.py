@@ -1,5 +1,5 @@
 """Admin-defined markets and idempotent exam grants."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -28,9 +28,7 @@ def create_market(db, admin_id, subject, exam_type, starts_at, ends_at, home_bra
         raise ValueError("Exam end must follow every branch start")
     if first_start < starts_at or first_start <= db_now(db):
         raise ValueError("Branch exam starts must be in the future")
-    lockout = first_start - timedelta(minutes=30)
-    if lockout <= db_now(db):
-        raise ValueError("Lockout must be in the future")
+    lockout = first_start
     if grant_pts is None:
         grant_pts = {"midsem": 100, "endsem": 150, "other": 100}[exam_type]
     if not (0 < min_stake <= away_min_stake <= grant_pts) or not (1 <= low_cap_pct <= 100 and 1 <= high_cap_pct <= 100):

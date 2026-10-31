@@ -53,6 +53,16 @@ def test_market_end_covers_every_branch_and_home_branch_is_scheduled(tmp_path):
             create_market(db, admin, "FCOA", "midsem", starts, starts + timedelta(hours=3), ["MECH"], {"CSE": starts})
 
 
+def test_market_can_open_ten_minutes_before_exam_and_locks_at_start(tmp_path):
+    path = tmp_path / "short_notice.db"
+    admin, _, _ = setup_users(path)
+    starts = datetime.now(timezone.utc) + timedelta(minutes=10)
+    with connect(path, write=True) as db:
+        market_id = create_market(db, admin, "FCOA", "midsem", starts, starts + timedelta(hours=1), ["CSE"], {"CSE": starts})
+        lockout = db.execute(select(markets.c.lockout_at).where(markets.c.id == market_id)).scalar_one()
+        assert datetime.fromisoformat(lockout) == starts
+
+
 def test_market_grant_bet_and_settlement_preserve_negative_score(tmp_path):
     path = tmp_path / "pilot.db"
     admin, alice, bob = setup_users(path)
