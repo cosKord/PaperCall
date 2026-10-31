@@ -106,9 +106,35 @@ def test_admin_totp_attempts_are_limited(tmp_path):
     assert statuses == [403] * 5 + [429]
 
 
+def test_local_pilot_admin_code_unlocks_only_on_loopback(tmp_path, monkeypatch):
+    monkeypatch.setenv("PILOT_ADMIN_CODE", "2111")
+    path = tmp_path / "local_admin.db"
+    initialize(path)
+    with connect(path, write=True) as db:
+        create_user(db, "admin@somaiya.edu", role="admin")
+    sent = []
+    app = create_app(path, mailer=sent.append, pilot_mode=True)
+    client = TestClient(app, client=("127.0.0.1", 50000))
+    assert client.get("/api/time").json()["pilot_admin_code_enabled"] is True
+    client.post("/api/auth/request-code", json={"email": "admin@somaiya.edu"})
+    client.post("/api/auth/verify-code", json={"email": "admin@somaiya.edu", "code": sent[-1].split()[-1]})
+    headers = {"X-CSRF-Token": client.cookies["csrf"]}
+    assert client.post("/api/auth/admin-totp", json={"code": "1234"}, headers=headers).status_code == 403
+    remote = TestClient(app, client=("192.0.2.1", 50000))
+    remote.cookies.update(client.cookies)
+    assert remote.post("/api/auth/admin-totp", json={"code": "2111"}, headers=headers).status_code == 403
+    assert client.post("/api/auth/admin-totp", json={"code": "2111"}, headers=headers).status_code == 200
+    assert client.get("/api/me").json()["admin_verified"] is True
+
+
 def test_production_requires_mail_and_otp_secret(tmp_path, monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.delenv("OTP_SECRET", raising=False)
     monkeypatch.delenv("SMTP_HOST", raising=False)
+    with pytest.raises(RuntimeError):
+        create_app(tmp_path / "production.db", pilot_mode=False)
+    for key in ("OTP_SECRET", "SMTP_HOST", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD"):
+        monkeypatch.setenv(key, "configured")
+    monkeypatch.setenv("PILOT_ADMIN_CODE", "2111")
     with pytest.raises(RuntimeError):
         create_app(tmp_path / "production.db", pilot_mode=False)

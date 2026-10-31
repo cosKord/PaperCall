@@ -89,9 +89,10 @@ def smtp_mailer(email, message):
 
 
 def create_app(path=None, mailer=None, pilot_mode=False):
+    pilot_admin_code = os.environ.get("PILOT_ADMIN_CODE")
     if os.environ.get("APP_ENV") == "production":
-        if pilot_mode or not all(os.environ.get(key) for key in ("OTP_SECRET", "SMTP_HOST", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD")):
-            raise RuntimeError("Production requires SMTP and OTP_SECRET; PILOT_MODE must be off")
+        if pilot_mode or pilot_admin_code or not all(os.environ.get(key) for key in ("OTP_SECRET", "SMTP_HOST", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD")):
+            raise RuntimeError("Production requires SMTP and OTP_SECRET; PILOT_MODE and PILOT_ADMIN_CODE must be off")
     initialize(path)
     app = FastAPI(title="Exam Prediction Market")
     upload_dir = Path(os.environ.get("UPLOAD_DIR", ROOT / "uploads"))
@@ -150,7 +151,7 @@ def create_app(path=None, mailer=None, pilot_mode=False):
     @app.get("/api/time")
     def time_route():
         with connect(path) as db:
-            return {"now": db_now(db).isoformat()}
+            return {"now": db_now(db).isoformat(), "pilot_admin_code_enabled": bool(pilot_mode and pilot_admin_code)}
 
     @app.post("/api/auth/request-code")
     def request_code_route(request: Request, body: EmailInput):
@@ -189,7 +190,12 @@ def create_app(path=None, mailer=None, pilot_mode=False):
         limit(request, f"admin_totp:{request.cookies.get('session', '')[:12]}", 5, 600)
         with connect(path, write=True) as db:
             user_id = user_from(request, db)
-            auth.verify_admin_totp(db, user_id, request.cookies.get("session"), body.code)
+            if pilot_mode and pilot_admin_code:
+                if not request.client or request.client.host not in ("127.0.0.1", "::1"):
+                    raise HTTPException(403, "Local admin code requires a loopback connection")
+                auth.verify_admin_pilot_code(db, user_id, request.cookies.get("session"), body.code, pilot_admin_code)
+            else:
+                auth.verify_admin_totp(db, user_id, request.cookies.get("session"), body.code)
         return {"ok": True}
 
     @app.post("/api/auth/logout")

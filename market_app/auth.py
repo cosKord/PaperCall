@@ -104,4 +104,15 @@ def verify_admin_totp(db, user_id, token, code):
     row = db.execute(select(users.c.totp_secret).where(users.c.id == user_id)).first()
     if not row or not row.totp_secret or not pyotp.TOTP(row.totp_secret).verify(code, valid_window=1):
         raise PermissionError("Invalid admin code")
+    _mark_admin_verified(db, user_id, token)
+
+
+def verify_admin_pilot_code(db, user_id, token, code, configured_code):
+    require_admin(db, user_id)
+    if not hmac.compare_digest(str(code), configured_code):
+        raise PermissionError("Invalid admin code")
+    _mark_admin_verified(db, user_id, token)
+
+
+def _mark_admin_verified(db, user_id, token):
     db.execute(sessions.update().where(sessions.c.token_hash == hashlib.sha256(token.encode()).hexdigest(), sessions.c.user_id == user_id).values(admin_verified=True))

@@ -11,10 +11,11 @@ python -m pip install -r requirements.txt
 python -m tools.migrate_demo exams.db pilot.db --apply
 python -m tools.bootstrap_admin --email admin@somaiya.edu
 $env:PILOT_MODE = '1'
+$env:PILOT_ADMIN_CODE = '2111'
 python -m uvicorn market_app.api:app --host 127.0.0.1 --port 8000
 ```
 
-Skip migration if `exams.db` does not exist. If `pilot.db` already exists, migration refuses to overwrite it. Bootstrap prints a private `otpauth://` URI for an authenticator app. Open <http://localhost:8000>. Local pilot mode shows login codes on the login screen; admin login also requires the authenticator code. The admin manually assigns each player's verified branch.
+Skip migration if `exams.db` does not exist or `pilot.db` already exists. Bootstrap prints a private `otpauth://` URI for an authenticator app. Open <http://localhost:8000>. Local pilot mode shows login codes on the login screen. With `PILOT_ADMIN_CODE=2111`, the admin's second step is **2111** from this computer; without that setting, use the authenticator code. The admin manually assigns each player's verified branch.
 
 The exam creator enters every branch writing the subject and its home branches. The form assigns one start time to all listed branches; use the API for differing times. Betting closes 30 minutes before the earliest start. Players cannot see other bets, pools, or odds until settlement. Each bet is final and limited by the available balance and tier cap. An empty winning side or a void topic refunds its stakes. Losing bets show negative net scores.
 
@@ -32,7 +33,7 @@ Postgres tables are created with Row Level Security enabled and no browser polic
 
 ## Production configuration
 
-Set `APP_ENV=production`, a long random `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `DATABASE_URL`, and a persistent `UPLOAD_DIR`. Leave `PILOT_MODE` unset. Serve the app behind HTTPS and keep Uvicorn bound to a private address. Startup refuses production mode if SMTP or the OTP secret is missing. `.env.example` lists variables; do not commit real values.
+Set `APP_ENV=production`, a long random `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `DATABASE_URL`, and a persistent `UPLOAD_DIR`. Leave `PILOT_MODE` and `PILOT_ADMIN_CODE` unset; production rejects either setting. Serve the app behind HTTPS and keep Uvicorn bound to a private address. Startup refuses production mode if SMTP or the OTP secret is missing. `.env.example` lists variables; do not commit real values.
 
 For local SQLite, back up with `python -m tools.backup_db pilot.db backups/pilot-YYYY-MM-DD.db`. Stop the server before restoring and preserve the current DB separately. For Supabase, use its database backup facilities. Keep one server process for this pilot: IP rate limits are currently in process memory.
 
