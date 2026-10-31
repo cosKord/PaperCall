@@ -1,3 +1,10 @@
 exams.db
 __pycache__/
 tests/tmp*/
+.superpowers/
+.env
+uploads/
+*.db
+*.db-*
+backups/
+.pytest_tmp/
