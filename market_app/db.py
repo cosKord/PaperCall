@@ -1,6 +1,7 @@
 """Portable SQLite/Postgres schema and lossless prototype migration."""
 import os
 import sqlite3
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
@@ -9,6 +10,7 @@ from pathlib import Path
 from sqlalchemy import (Boolean, CheckConstraint, Column, ForeignKey, Integer,
                         JSON, MetaData, String, Table, Text, UniqueConstraint,
                         create_engine, func, select, text)
+from sqlalchemy.engine import make_url
 
 metadata = MetaData()
 users = Table("users", metadata,
@@ -69,10 +71,15 @@ settlement_previews = Table("settlement_previews", metadata,
 
 def database_url(path=None):
     if path is None:
-        return os.environ.get("DATABASE_URL") or f"sqlite:///{Path(__file__).resolve().parents[1] / 'pilot.db'}"
+        path = os.environ.get("DATABASE_URL") or f"sqlite:///{Path(__file__).resolve().parents[1] / 'pilot.db'}"
     if isinstance(path, Path):
         return f"sqlite:///{path.resolve().as_posix()}"
-    return str(path)
+    url = make_url(str(path))
+    if url.drivername in ("postgresql", "postgres"):
+        url = url.set(drivername="postgresql+psycopg")
+    if url.drivername.startswith("postgresql") and "sslmode" not in url.query:
+        url = url.update_query_dict({"sslmode": "require"})
+    return url.render_as_string(hide_password=False)
 
 
 @lru_cache(maxsize=8)
@@ -86,6 +93,10 @@ def engine_for(url):
 def initialize(path=None):
     engine = engine_for(database_url(path))
     metadata.create_all(engine)
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as db:
+            for table_name in metadata.tables:
+                db.exec_driver_sql(f'ALTER TABLE "{table_name}" ENABLE ROW LEVEL SECURITY')
     return engine
 
 
@@ -107,6 +118,15 @@ def balance(db, user_id):
     return int(db.execute(select(func.coalesce(func.sum(ledger.c.amount), 0)).where(ledger.c.user_id == user_id)).scalar_one())
 
 
+def db_now(db):
+    """Read database time inside the caller's transaction."""
+    if db.engine.dialect.name == "sqlite":
+        value = db.exec_driver_sql("SELECT strftime('%Y-%m-%dT%H:%M:%f+00:00','now')").scalar_one()
+        return datetime.fromisoformat(value)
+    value = db.exec_driver_sql("SELECT clock_timestamp()").scalar_one()
+    return value.astimezone(timezone.utc)
+
+
 @dataclass(frozen=True)
 class MigrationReport:
     users: int
@@ -114,10 +134,13 @@ class MigrationReport:
     bets: int
 
 
-def migrate_demo(source: Path, target: Path, dry_run: bool = True) -> MigrationReport:
+def migrate_demo(source: Path, target: Path | str, dry_run: bool = True) -> MigrationReport:
     """Migrate legacy data into a new DB. Never overwrite the old database."""
-    if source.resolve() == target.resolve() or target.exists():
-        raise ValueError("Migration target must be a new database")
+    url = make_url(database_url(target))
+    if url.drivername.startswith("sqlite"):
+        target_file = Path(url.database)
+        if source.resolve() == target_file.resolve() or target_file.exists():
+            raise ValueError("Migration target must be a new database")
     old = sqlite3.connect(source)
     old.row_factory = sqlite3.Row
     try:
@@ -130,6 +153,8 @@ def migrate_demo(source: Path, target: Path, dry_run: bool = True) -> MigrationR
             return report
         initialize(target)
         with connect(target, write=True) as db:
+            if db.execute(select(func.count()).select_from(users)).scalar_one() or db.execute(select(func.count()).select_from(markets)).scalar_one():
+                raise ValueError("Migration target must be empty")
             for u in old_users:
                 db.execute(users.insert().values(id=u["id"], username=u["username"], role=u["role"], active=False, created_at="1970-01-01T00:00:00+00:00"))
             for e in old_exams:
@@ -151,6 +176,9 @@ def migrate_demo(source: Path, target: Path, dry_run: bool = True) -> MigrationR
             for u in old_users:
                 if balance(db, u["id"]) != u["balance"]:
                     raise ValueError(f"Balance reconciliation failed for legacy user {u['id']}")
+            if db.engine.dialect.name == "postgresql":
+                for name in ("users", "markets", "topics", "bets"):
+                    db.exec_driver_sql(f"SELECT setval(pg_get_serial_sequence('{name}', 'id'), COALESCE((SELECT MAX(id) FROM {name}), 1), true)")
         return report
     finally:
         old.close()

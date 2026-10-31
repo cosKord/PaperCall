@@ -7,4 +7,5 @@ uploads/
 *.db
 *.db-*
 backups/
-.pytest_tmp/
+.pytest_*/
+*.log

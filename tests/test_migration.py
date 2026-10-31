@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from app import Store
 from sqlalchemy import text
-from market_app.db import balance, connect, migrate_demo
+from market_app.db import balance, connect, database_url, migrate_demo
 
 
 def test_migration_reconciles_legacy_balances_and_preserves_results(tmp_path):
@@ -36,3 +37,21 @@ def test_migration_reconciles_legacy_balances_and_preserves_results(tmp_path):
         assert db.execute(text("SELECT COUNT(*) FROM ledger WHERE reason='payout'")).fetchone()[0] == 1
         assert db.execute(text("SELECT COUNT(*) FROM ledger WHERE reason='refund'")).fetchone()[0] == 1
         assert db.execute(text("SELECT COUNT(*) FROM ledger WHERE reason='bet'")).fetchone()[0] == 4
+
+
+def test_supabase_url_uses_psycopg_and_ssl(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://postgres.example:password@pooler.supabase.com:5432/postgres")
+    url = database_url()
+    assert url.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in url
+
+
+def test_migration_accepts_database_url_and_rejects_nonempty_target(tmp_path):
+    old_path = tmp_path / "old.db"
+    old = Store(old_path)
+    old.initialize()
+    target = tmp_path / "new.db"
+    target_url = f"sqlite:///{target.as_posix()}"
+    assert migrate_demo(old_path, target_url, dry_run=False).users == 3
+    with pytest.raises(ValueError):
+        migrate_demo(old_path, target_url, dry_run=False)

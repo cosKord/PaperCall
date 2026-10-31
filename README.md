@@ -1,30 +1,46 @@
-# Exam Prediction Lab
+# PaperCall · Exam Prediction Market
 
-A local, virtual-points prototype for exam predictions. No dependencies beyond Python 3.10+.
+A points-only exam prediction market. The new FastAPI pilot runs beside the original demo and uses a separate database. The old `exams.db` is never overwritten.
 
-## Run
+## Local start (Windows PowerShell)
+
+From `D:\projects\ExamsMinigame`:
 
 ```powershell
-cd D:\projects\ExamsMinigame
-python app.py
+python -m pip install -r requirements.txt
+python -m tools.migrate_demo exams.db pilot.db --apply
+python -m tools.bootstrap_admin --email admin@somaiya.edu
+$env:PILOT_MODE = '1'
+python -m uvicorn market_app.api:app --host 127.0.0.1 --port 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000). Use `PORT=8001` (PowerShell: `$env:PORT=8001`) to change the port.
+Skip migration if `exams.db` does not exist. If `pilot.db` already exists, migration refuses to overwrite it. Bootstrap prints a private `otpauth://` URI for an authenticator app. Open <http://localhost:8000>. Local pilot mode shows login codes on the login screen; admin login also requires the authenticator code. The admin manually assigns each player's verified branch.
 
-Demo logins: `admin / admin123`, `alice / player123`, `bob / player123`. Each player starts with 1,000 points. The SQLite file `exams.db` is created next to `app.py` and keeps exams, bets, settlements, sessions, and balances across restarts. Delete it only to reset all demo data.
+The exam creator enters every branch writing the subject and its home branches. The form assigns one start time to all listed branches; use the API for differing times. Betting closes 30 minutes before the earliest start. Players cannot see other bets, pools, or odds until settlement. Each bet is final and limited by the available balance and tier cap. An empty winning side or a void topic refunds its stakes. Losing bets show negative net scores.
 
-## Flow and rules
+## Supabase as the database
 
-1. Admin creates an exam with a future start time, then adds topic or specific-question YES/NO markets.
-2. Players bet positive whole points while the exam is open. Stakes are deducted immediately. Their own bets are visible, but other bets, pool totals, and odds are hidden.
-3. Betting closes automatically at the exam start time or when the admin locks it. Admin settles each market YES or NO once the exam has started; an early manual lock does not permit early settlement.
-4. The complete pool is distributed in proportion to winning stakes. Integer rounding uses largest remainders and stable bet order, so every point is allocated. If there are no bets on the winning side, every stake is refunded. Settlement is final and cannot run twice.
-5. A settled market reveals YES/NO pool totals. The leaderboard ranks settled profit only, without exposing live balances or stakes.
+The app connects to **Supabase Postgres from the Python server**. It does not use Supabase Auth or expose the database to the browser.
 
-This is a local demo with known credentials and virtual points, not a production authentication or real-money system.
+1. Create a Supabase project. In its dashboard click **Connect**. Choose **Session pooler** for an IPv4-only host, or **Direct connection** for a persistent backend with IPv6. Copy the exact URL; pooler hostnames and usernames must come from the dashboard.
+2. Replace `[YOUR-PASSWORD]` with your database password, percent-encoding reserved characters. The app selects Psycopg and adds `sslmode=require` unless the URL specifies a stronger mode. For full certificate verification, use Supabase's root certificate with `sslmode=verify-full` and `sslrootcert`.
+3. Set it in the server environment, for example `$env:DATABASE_URL = 'postgresql://postgres.PROJECT_REF:ENCODED_PASSWORD@POOLER_HOST:5432/postgres?sslmode=require'`. Every uppercase value is a placeholder. Never paste the real URL into frontend code, the repo, or chat.
+4. To transfer existing FCOA data into a **new, empty** Supabase database, run `python -m tools.migrate_demo exams.db "$env:DATABASE_URL" --apply`. This sends existing users, bets and balances to Supabase; review the transfer before running it. For a blank database, skip migration and start the app; it creates tables automatically.
+5. With `DATABASE_URL` still set, run `python -m tools.bootstrap_admin --email YOUR_ADMIN@somaiya.edu`, configure production settings below, then start Uvicorn. Question-paper files need a persistent `UPLOAD_DIR`; Postgres stores their hashes and paths, not file bytes.
+
+Postgres tables are created with Row Level Security enabled and no browser policies. Keep the database URL and privileged keys on the server. No Supabase API key is needed for the database connection.
+
+## Production configuration
+
+Set `APP_ENV=production`, a long random `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `DATABASE_URL`, and a persistent `UPLOAD_DIR`. Leave `PILOT_MODE` unset. Serve the app behind HTTPS and keep Uvicorn bound to a private address. Startup refuses production mode if SMTP or the OTP secret is missing. `.env.example` lists variables; do not commit real values.
+
+For local SQLite, back up with `python -m tools.backup_db pilot.db backups/pilot-YYYY-MM-DD.db`. Stop the server before restoring and preserve the current DB separately. For Supabase, use its database backup facilities. Keep one server process for this pilot: IP rate limits are currently in process memory.
 
 ## Tests
 
 ```powershell
-python -m unittest discover -s tests -v
+python -m pytest -q --basetemp=.pytest_run
+node --check pilot.js
 ```
+
+The original demo is still in `app.py` and its data remains in `exams.db`. The new app uses `pilot.db` locally.
