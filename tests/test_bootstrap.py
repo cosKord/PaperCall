@@ -1,7 +1,7 @@
 from sqlalchemy import select
 
-from market_app.db import connect, initialize, users
-from tools.bootstrap_admin import bootstrap_admin
+from app.database import connect, initialize, users
+from scripts.bootstrap_admin import bootstrap_admin
 
 
 def test_admin_bootstrap_is_idempotent_and_keeps_totp_secret(tmp_path):

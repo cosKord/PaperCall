@@ -5,10 +5,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 import pyotp
 
-from market_app.api import create_app
-from market_app.auth import create_user
-from market_app.db import connect, initialize, login_codes, users
-from market_app.markets import create_market
+from app.api import create_app
+from app.auth import create_user
+from app.database import connect, initialize, login_codes, users
+from app.markets import create_market
 
 
 def test_login_and_private_market_response(tmp_path):
@@ -23,6 +23,9 @@ def test_login_and_private_market_response(tmp_path):
     sent = []
     app = create_app(path, mailer=sent.append, pilot_mode=True)
     client = TestClient(app)
+    assert 'src="/app.js"' in client.get("/").text
+    assert client.get("/app.js").status_code == 200
+    assert client.get("/app.css").status_code == 200
     assert client.get("/api/markets").status_code == 401
     response = client.post("/api/auth/request-code", json={"email": "alice@somaiya.edu"})
     assert response.status_code == 200

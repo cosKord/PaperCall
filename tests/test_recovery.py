@@ -1,8 +1,8 @@
 from sqlalchemy import select
 
-from market_app.auth import create_user
-from market_app.db import balance, connect, initialize, ledger
-from tools.backup_db import backup_db
+from app.auth import create_user
+from app.database import balance, connect, initialize, ledger
+from scripts.backup_db import backup_db
 
 
 def test_backup_restores_ledger_balance(tmp_path):

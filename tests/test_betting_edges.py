@@ -3,10 +3,10 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from market_app.auth import create_user
-from market_app.betting import BetError, place_bet
-from market_app.db import balance, bets, connect, initialize, ledger, markets, topics
-from market_app.markets import add_topic, claim_grant, create_market, market_phase, publish_market
+from app.auth import create_user
+from app.betting import BetError, place_bet
+from app.database import balance, bets, connect, initialize, ledger, markets, topics
+from app.markets import add_topic, claim_grant, create_market, market_phase, publish_market
 
 
 def test_exact_cutoff_and_parallel_requests_cannot_overspend(tmp_path):

@@ -3,13 +3,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy import select
 
-from market_app.db import (balance, connect, initialize, ledger, markets,
-                           topics, users)
-from market_app.auth import create_user, request_code, verify_code, assign_branch
-from market_app.markets import create_market, add_topic, publish_market, claim_grant
-from market_app.betting import place_bet, BetError
-from market_app.settlement import attach_paper, preview_settlement, confirm_settlement
-from market_app.views import leaderboard, market_view
+from app.database import (balance, connect, initialize, ledger, markets,
+                          topics, users)
+from app.auth import create_user, request_code, verify_code, assign_branch
+from app.markets import create_market, add_topic, publish_market, claim_grant
+from app.betting import place_bet, BetError
+from app.settlement import attach_paper, preview_settlement, confirm_settlement
+from app.views import leaderboard, market_view
 
 
 def setup_users(path):

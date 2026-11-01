@@ -2,11 +2,11 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from market_app.auth import create_user
-from market_app.betting import place_bet
-from market_app.db import balance, connect, initialize, markets, topics
-from market_app.markets import add_topic, claim_grant, create_market, publish_market
-from market_app.settlement import attach_paper, confirm_settlement, preview_settlement
+from app.auth import create_user
+from app.betting import place_bet
+from app.database import balance, connect, initialize, markets, topics
+from app.markets import add_topic, claim_grant, create_market, publish_market
+from app.settlement import attach_paper, confirm_settlement, preview_settlement
 
 
 def test_void_refunds_and_floor_rounding_discards_fraction(tmp_path):

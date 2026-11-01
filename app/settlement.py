@@ -7,8 +7,8 @@ from pathlib import Path
 from sqlalchemy import delete, select
 
 from .auth import require_admin
-from .db import (audit_log, bets, db_now, ledger, markets,
-                 settlement_previews, topics)
+from .database import (audit_log, bets, db_now, ledger, markets,
+                       settlement_previews, topics)
 
 
 def attach_paper(db, admin_id, market_id, content, filename, upload_dir):

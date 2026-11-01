@@ -9,7 +9,7 @@ from datetime import timedelta
 import pyotp
 from sqlalchemy import select
 
-from .db import audit_log, db_now, login_codes, sessions, users
+from .database import audit_log, db_now, login_codes, sessions, users
 
 
 @dataclass(frozen=True)

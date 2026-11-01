@@ -2,7 +2,7 @@
 import argparse
 from pathlib import Path
 
-from market_app.db import migrate_demo
+from app.database import migrate_demo
 
 
 def main():

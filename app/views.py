@@ -1,7 +1,7 @@
 """Caller-safe views and settled-only rankings."""
 from sqlalchemy import select
 
-from .db import balance, bets, markets, topics, users
+from .database import balance, bets, markets, topics, users
 from .markets import market_phase
 
 

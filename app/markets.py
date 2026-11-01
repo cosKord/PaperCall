@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from .auth import require_admin
-from .db import (audit_log, balance, branch_exams, db_now, grant_claims,
-                 ledger, markets, topics, users)
+from .database import (audit_log, balance, branch_exams, db_now, grant_claims,
+                       ledger, markets, topics, users)
 
 
 def _utc(value):

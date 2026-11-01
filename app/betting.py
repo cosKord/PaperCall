@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import select
 
-from .db import balance, bets, branch_exams, db_now, ledger, markets, topics, users
+from .database import balance, bets, branch_exams, db_now, ledger, markets, topics, users
 from .markets import market_phase
 
 

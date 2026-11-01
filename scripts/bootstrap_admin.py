@@ -4,8 +4,8 @@ import argparse
 import pyotp
 from sqlalchemy import select
 
-from market_app.auth import create_user
-from market_app.db import connect, initialize, users
+from app.auth import create_user
+from app.database import connect, initialize, users
 
 
 def bootstrap_admin(path=None, email="admin@somaiya.edu"):
