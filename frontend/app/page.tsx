@@ -1,12 +1,11 @@
 import Link from "next/link";
 
+import { SiteHeader } from "@/components/site-header";
+
 export default function LandingPage() {
   return (
     <main className="landing">
-      <header className="site-header">
-        <Link className="brand" href="/">PaperCall</Link>
-        <Link className="button secondary" href="/login">Login</Link>
-      </header>
+      <SiteHeader />
       <section className="hero">
         <p className="eyebrow">Points only · No cash value</p>
         <h1>Call the paper before it lands.</h1>
