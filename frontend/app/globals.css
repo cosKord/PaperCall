@@ -33,4 +33,30 @@ button:disabled { cursor: wait; opacity: .65; }
 .text-button { border: 0; padding: 5px 0; background: transparent; color: #1c5a38; text-decoration: underline; cursor: pointer; justify-self: start; }
 .notice { padding: 10px 12px; border-radius: 7px; background: #edf5ef; }
 .error { color: #9d2424; font-weight: 700; }
+.dashboard-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 48px 0 24px; }
+.dashboard-heading h1 { font-size: clamp(2.2rem, 5vw, 4.5rem); margin: 4px 0; }
+.account-summary { display: grid; gap: 5px; text-align: right; }
+.account-summary strong { font-size: 1.4rem; }
+.content-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 32px; margin-top: 32px; }
+.card-list, .topic-list { display: grid; gap: 14px; }
+.market-card { display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 20px; background: white; border: 1px solid #dce3dc; border-radius: 12px; }
+.market-card h3, .market-card p { margin: 5px 0; }
+.empty-state { padding: 36px; text-align: center; border: 1px dashed #aebbb1; border-radius: 12px; }
+.leaderboard { padding: 0; list-style-position: inside; }
+.leaderboard li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #dce3dc; }
+.admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 28px 0; }
+.topic-list { margin: 28px 0; }
+.topic-card h2 { margin-top: 5px; }
+.inline-form { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(100px, .6fr); gap: 10px 14px; align-items: end; margin-top: 18px; }
+.inline-form .button, .inline-form .error { grid-column: 1 / -1; }
+.admin-controls { margin-top: 40px; }
+.button.danger { background: #8d2929; border-color: #8d2929; }
+.settlement-form { margin-top: 32px; border-top: 1px solid #dce3dc; padding-top: 20px; }
+.outcome-row { display: grid; grid-template-columns: 1fr 180px; gap: 12px; align-items: center; margin: 10px 0; }
+@media (max-width: 760px) {
+  .content-grid, .admin-grid { grid-template-columns: 1fr; }
+  .dashboard-heading, .market-card { align-items: flex-start; flex-direction: column; }
+  .account-summary { text-align: left; }
+  .inline-form, .outcome-row { grid-template-columns: 1fr; }
+}
 :focus-visible { outline: 3px solid #d4874a; outline-offset: 3px; }

@@ -57,6 +57,20 @@ def publish_market(db, admin_id, market_id):
     db.execute(audit_log.insert().values(actor_id=admin_id, action="publish_market", detail={"market_id": market_id}, created_at=db_now(db).isoformat()))
 
 
+def lock_market(db, admin_id, market_id):
+    require_admin(db, admin_id)
+    now = db_now(db)
+    if market_phase(db, market_id, now) != "open":
+        raise ValueError("Only open markets can be locked")
+    if db.execute(
+        markets.update()
+        .where(markets.c.id == market_id, markets.c.status == "open")
+        .values(lockout_at=now.isoformat())
+    ).rowcount != 1:
+        raise ValueError("Only open markets can be locked")
+    db.execute(audit_log.insert().values(actor_id=admin_id, action="lock_market", detail={"market_id": market_id}, created_at=now.isoformat()))
+
+
 def market_phase(db, market_id, at=None):
     row = db.execute(select(markets).where(markets.c.id == market_id)).mappings().first()
     if not row:

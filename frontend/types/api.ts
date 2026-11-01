@@ -1,5 +1,5 @@
 export type UserRole = "player" | "admin";
-export type MarketStatus = "draft" | "open" | "locked" | "settled";
+export type MarketStatus = "draft" | "open" | "closed" | "settled";
 export type BetSide = "hit" | "miss";
 
 export interface Me {

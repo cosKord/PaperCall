@@ -70,6 +70,9 @@ def test_admin_and_player_http_flow(tmp_path):
     assert player_client.post("/api/bets", json={"topic_id": topic_id, "side":"hit", "stake":20}, headers=player_headers).status_code == 200
     detail = player_client.get(f"/api/markets/{market_id}").json()
     assert "pool" not in detail["topics"][0]
+    assert admin_client.post(f"/api/admin/markets/{market_id}/lock", json={}, headers=headers).status_code == 200
+    assert player_client.get(f"/api/markets/{market_id}").json()["status"] == "closed"
+    assert player_client.post("/api/bets", json={"topic_id": topic_id, "side":"miss", "stake":20}, headers=player_headers).status_code == 400
 
 
 def test_login_rate_limit_by_ip(tmp_path):

@@ -275,6 +275,13 @@ def create_app(path=None, mailer=None, pilot_mode=False):
             market_rules.publish_market(db, admin_from(request, db), market_id)
         return {"ok": True}
 
+    @app.post("/api/admin/markets/{market_id}/lock")
+    def lock_route(request: Request, market_id: int):
+        csrf(request)
+        with connect(path, write=True) as db:
+            market_rules.lock_market(db, admin_from(request, db), market_id)
+        return {"ok": True}
+
     @app.post("/api/admin/markets/{market_id}/paper")
     async def paper_upload(request: Request, market_id: int, file: UploadFile = File(...)):
         csrf(request)
