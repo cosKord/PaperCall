@@ -41,3 +41,51 @@ def leaderboard(db, scope="season", market_id=None):
         records = db.execute(query).all()
         rows.append({"email": user["email"] or user["username"], "score": sum(r.payout - r.stake for r in records)})
     return sorted(rows, key=lambda r: (-r["score"], r["email"]))
+
+
+def profile_view(db, user_id):
+    user = db.execute(select(users).where(users.c.id == user_id)).mappings().first()
+    if not user:
+        raise ValueError("User not found")
+
+    settled = db.execute(
+        select(
+            bets.c.id,
+            markets.c.id.label("market_id"),
+            markets.c.subject,
+            markets.c.settled_at,
+            topics.c.id.label("topic_id"),
+            topics.c.title.label("topic"),
+            topics.c.outcome,
+            bets.c.side,
+            bets.c.stake,
+            bets.c.payout,
+        )
+        .select_from(bets.join(topics, bets.c.topic_id == topics.c.id).join(markets, topics.c.market_id == markets.c.id))
+        .where(bets.c.user_id == user_id, markets.c.status == "settled")
+        .order_by(markets.c.settled_at.desc(), bets.c.id.desc())
+    ).mappings().all()
+    email = user["email"] or user["username"]
+    rankings = leaderboard(db)
+    rank = next((index for index, row in enumerate(rankings, start=1) if row["email"] == email), 0)
+
+    return {
+        "user": {"id": user_id, "email": email, "branch": user["branch"], "balance": balance(db, user_id)},
+        "score": sum(row["payout"] - row["stake"] for row in settled),
+        "rank": rank,
+        "settled_bets": [
+            {
+                "market_id": row["market_id"],
+                "subject": row["subject"],
+                "topic_id": row["topic_id"],
+                "topic": row["topic"],
+                "side": row["side"],
+                "stake": row["stake"],
+                "payout": row["payout"],
+                "net": row["payout"] - row["stake"],
+                "outcome": row["outcome"],
+                "settled_at": row["settled_at"],
+            }
+            for row in settled
+        ],
+    }

@@ -207,6 +207,11 @@ def create_app(path=None, mailer=None, pilot_mode=False):
             user = db.execute(select(users).where(users.c.id == user_id)).mappings().one()
             return {"id": user_id, "email": user["email"] or user["username"], "role": user["role"], "branch": user["branch"], "balance": balance(db, user_id), "admin_verified": bool(db.execute(select(sessions.c.admin_verified).where(sessions.c.token_hash == hashlib.sha256(request.cookies["session"].encode()).hexdigest())).scalar_one())}
 
+    @app.get("/api/profile")
+    def profile(request: Request):
+        with connect(path) as db:
+            return views.profile_view(db, user_from(request, db))
+
     @app.get("/api/markets")
     def market_list(request: Request):
         with connect(path) as db:
