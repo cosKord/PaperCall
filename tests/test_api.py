@@ -23,9 +23,9 @@ def test_login_and_private_market_response(tmp_path):
     sent = []
     app = create_app(path, mailer=sent.append, pilot_mode=True)
     client = TestClient(app)
-    assert 'src="/app.js"' in client.get("/").text
-    assert client.get("/app.js").status_code == 200
-    assert client.get("/app.css").status_code == 200
+    assert client.get("/").status_code == 404
+    assert client.get("/app.js").status_code == 404
+    assert client.get("/api/time").status_code == 200
     assert client.get("/api/markets").status_code == 401
     response = client.post("/api/auth/request-code", json={"email": "alice@somaiya.edu"})
     assert response.status_code == 200

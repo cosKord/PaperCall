@@ -1,0 +1,23 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #17221b;
+  background: #f5f6f2;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: inherit; }
+button, input, select { font: inherit; }
+.landing { min-height: 100vh; padding: 24px clamp(20px, 6vw, 88px); }
+.site-header { display: flex; align-items: center; justify-content: space-between; }
+.brand { font-weight: 800; text-decoration: none; font-size: 1.2rem; }
+.hero { max-width: 720px; padding: 18vh 0 10vh; }
+.hero h1 { font-size: clamp(2.7rem, 7vw, 5.8rem); line-height: .98; margin: 12px 0 24px; }
+.hero p { max-width: 58ch; line-height: 1.6; }
+.eyebrow { font-weight: 700; color: #356047; }
+.actions { display: flex; gap: 18px; align-items: center; margin-top: 30px; flex-wrap: wrap; }
+.button { display: inline-block; border: 1px solid #1c5a38; border-radius: 8px; background: #1c5a38; color: white; padding: 11px 18px; text-decoration: none; font-weight: 700; cursor: pointer; }
+.button.secondary { background: transparent; color: #1c5a38; }
+.text-link { color: #1c5a38; font-weight: 700; }
+:focus-visible { outline: 3px solid #d4874a; outline-offset: 3px; }

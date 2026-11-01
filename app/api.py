@@ -19,7 +19,6 @@ from .database import (balance, branch_exams, connect, db_now, initialize,
                        markets, sessions, topics, users)
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND = ROOT / "frontend"
 
 
 class EmailInput(BaseModel):
@@ -138,16 +137,6 @@ def create_app(path=None, mailer=None, pilot_mode=False):
     @app.exception_handler(PermissionError)
     async def permission_error(_, exc):
         return JSONResponse(status_code=403, content={"detail": str(exc)})
-
-    @app.get("/")
-    def index():
-        return FileResponse(FRONTEND / "index.html")
-
-    @app.get("/{asset_name}")
-    def asset(asset_name: str):
-        if asset_name not in ("app.js", "app.css"):
-            raise HTTPException(404)
-        return FileResponse(FRONTEND / asset_name)
 
     @app.get("/api/time")
     def time_route():
