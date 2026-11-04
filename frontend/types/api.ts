@@ -5,10 +5,19 @@ export type BetSide = "hit" | "miss";
 export interface Me {
   id: number;
   email: string;
+  username?: string;
   role: UserRole;
   branch: string | null;
   balance: number;
+  welcome_grant_available?: boolean;
+  avatar_url?: string | null;
   admin_verified: boolean;
+}
+
+export interface WelcomeGrantResponse {
+  granted: boolean;
+  amount: number;
+  balance: number;
 }
 
 export interface TimeResponse {
@@ -19,6 +28,7 @@ export interface TimeResponse {
 export interface AuthResponse {
   ok: boolean;
   demo_code?: string;
+  needs_branch?: boolean;
 }
 
 export interface MarketSummary {
@@ -43,6 +53,7 @@ export interface Topic {
   my_bet?: MyBet;
   outcome?: BetSide;
   pool?: Record<BetSide, number>;
+  max_stake: number;
 }
 
 export interface MarketDetail {
@@ -50,7 +61,7 @@ export interface MarketDetail {
   subject: string;
   exam_type: string;
   starts_at: string;
-  ends_at: string;
+  ends_at: string | null;
   lockout_at: string;
   status: MarketStatus;
   grant_pts: number;
@@ -60,15 +71,9 @@ export interface MarketDetail {
 }
 
 export interface LeaderboardRow {
-  email: string;
+  name: string;
   score: number;
-}
-
-export interface AdminUser {
-  id: number;
-  email: string | null;
-  branch: string | null;
-  role: UserRole;
+  is_you: boolean;
 }
 
 export interface SettlementPayout {
@@ -86,6 +91,7 @@ export interface SettlementPreview {
 export interface SettledBet {
   market_id: number;
   subject: string;
+  exam_type: string;
   topic_id: number;
   topic: string;
   side: BetSide;
@@ -97,8 +103,35 @@ export interface SettledBet {
 }
 
 export interface ProfileResponse {
-  user: Pick<Me, "id" | "email" | "branch" | "balance">;
+  user: Pick<Me, "id" | "email" | "branch" | "balance" | "avatar_url"> & {
+    username: string;
+    full_name: string | null;
+    academic_year: string | null;
+  };
   score: number;
   rank: number;
+  prediction_count: number;
+  subject_count: number;
+  success_rate: number;
+  active_bets: ActiveBet[];
   settled_bets: SettledBet[];
+}
+
+export interface ActiveBet {
+  market_id: number;
+  subject: string;
+  exam_type: string;
+  topic_id: number;
+  topic: string;
+  side: BetSide;
+  stake: number;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  username: string | null;
+  branch: string | null;
+  active: boolean;
+  created_at: string;
 }

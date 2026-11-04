@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, push: vi.fn() }),
 }));
 vi.mock("@/components/auth-guard", () => ({
-  AuthGuard: ({ children }: { children: (user: Me) => React.ReactNode }) => <>{children(guardedUser)}</>,
+  AuthGuard: ({ children }: { children: (user: Me) => React.ReactNode; }) => <>{children(guardedUser)}</>,
 }));
 vi.mock("@/lib/api-client", () => ({ apiFetch: vi.fn() }));
 
@@ -69,7 +69,7 @@ describe("RoomPage", () => {
     expect(screen.getByRole("link", { name: /question paper/i })).toHaveAttribute("href", "/api/markets/5/paper");
   });
 
-  it("posts a final integer bet through FastAPI", async () => {
+  it("posts a final integer bet through the API", async () => {
     const user = userEvent.setup();
     render(<RoomPage />);
     await screen.findByRole("heading", { name: /fcoa/i });

@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
-const fastApiUrl = (process.env.FASTAPI_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
-const parsedApiUrl = new URL(fastApiUrl);
+const fastifyUrl = (process.env.FASTIFY_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const parsedApiUrl = new URL(fastifyUrl);
 
 if (!['http:', 'https:'].includes(parsedApiUrl.protocol)) {
-  throw new Error("FASTAPI_URL must be an http(s) URL");
+  throw new Error("FASTIFY_URL must be an http(s) URL");
 }
 
 const nextConfig: NextConfig = {
@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${fastApiUrl}/api/:path*` }];
+    return [{ source: "/api/:path*", destination: `${fastifyUrl}/api/:path*` }];
   },
 };
 

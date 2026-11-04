@@ -12,8 +12,16 @@ function remainingLabel(milliseconds: number) {
   return `${days ? `${days}d ` : ""}${hours}h ${minutes}m ${remainder}s`;
 }
 
-export function Countdown({ target, serverNow }: { target: string; serverNow: string }) {
-  const [remaining, setRemaining] = useState(() => Date.parse(target) - Date.parse(serverNow));
+export function Countdown({
+  target,
+  serverNow,
+}: {
+  target: string;
+  serverNow: string;
+}) {
+  const [remaining, setRemaining] = useState(
+    () => Date.parse(target) - Date.parse(serverNow),
+  );
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -24,5 +32,7 @@ export function Countdown({ target, serverNow }: { target: string; serverNow: st
     return () => window.clearInterval(interval);
   }, [serverNow, target]);
 
-  return <span aria-label="Time until betting locks">{remainingLabel(remaining)}</span>;
+  return (
+    <span aria-label="Time until calls lock">{remainingLabel(remaining)}</span>
+  );
 }

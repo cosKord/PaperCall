@@ -1,62 +1,80 @@
-# PaperCall · Exam Prediction Market
+# PaperCall
 
-A points-only exam prediction market. The new FastAPI pilot runs beside the original demo and uses a separate database. The old `exams.db` is never overwritten.
+PaperCall is a campus exam prediction game. Students call **Hit** or **Miss** on exam topics using virtual points, follow the shared pool, and compare settled results on the leaderboard. Points have no irl value.
 
-## Local start (Windows PowerShell)
+Administrators manage Users, branches, examinations, schedules, topics, market locks, and settlement.
 
-From `D:\projects\ExamsMinigame`:
+## Under the hood
 
-```powershell
-python -m pip install -r requirements.txt
-python -m scripts.migrate_demo exams.db pilot.db --apply
-python -m scripts.bootstrap_admin --email admin@somaiya.edu
-$env:PILOT_MODE = '1'
-$env:PILOT_ADMIN_CODE = '2111'
-python -m uvicorn app.api:app --host 127.0.0.1 --port 8000
-```
+- Browse examinations and subjects for your branch.
+- Call Hit or Miss on a topic using points from your balance.
+- See the live distribution of points and an estimated return that includes your proposed stake while calls are open.
+- Follow active and settled calls by subject and examination.
+- Claim the one-time starting points available to a new player.
+- View the leaderboard, edit your profile, and send a problem report.
+- Admins upload the question paper, review settlement outcomes against it, and confirm results before they are finalized.
+- Admins publish and manage examinations, topics, schedules, and settlement.
 
-Skip migration if `exams.db` does not exist or `pilot.db` already exists. Bootstrap prints a private `otpauth://` URI for an authenticator app. Open <http://localhost:8000>. Local pilot mode shows login codes on the login screen. With `PILOT_ADMIN_CODE=2111`, the admin's second step is **2111** from this computer; without that setting, use the authenticator code. The admin manually assigns each player's verified branch.
+## Stack
 
-The exam creator enters every branch writing the subject and its home branches. The form assigns one start time to all listed branches; use the API for differing times. Betting closes at the earliest branch's exam start. Players cannot see other bets, pools, or odds until settlement. Each bet is final and limited by the available balance and tier cap. An empty winning side or a void topic refunds its stakes. Losing bets show negative net scores.
+| Area | Stack |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Fastify 5, Node.js, JavaScript, Zod |
+| Database | Supabase-hosted PostgreSQL, Prisma ORM |
+| Authentication | Supabase Auth: email/password and Google OAuth |
 
-## Supabase as the database
+The browser signs users in through Supabase Auth. The frontend exchanges that identity with the Fastify API, which verifies the Supabase session, creates its own secure session cookie, and uses Prisma to access PostgreSQL. Database credentials and OAuth secrets stay on the server; the browser only needs the Supabase project URL and publishable key.
 
-The app connects to **Supabase Postgres from the Python server**. It does not use Supabase Auth or expose the database to the browser.
+## Hosted architecture
 
-1. Create a Supabase project. In its dashboard click **Connect**. Choose **Session pooler** for an IPv4-only host, or **Direct connection** for a persistent backend with IPv6. Copy the exact URL; pooler hostnames and usernames must come from the dashboard.
-2. Replace `[YOUR-PASSWORD]` with your database password, percent-encoding reserved characters. The app selects Psycopg and adds `sslmode=require` unless the URL specifies a stronger mode. For full certificate verification, use Supabase's root certificate with `sslmode=verify-full` and `sslrootcert`.
-3. Set it in the server environment, for example `$env:DATABASE_URL = 'postgresql://postgres.PROJECT_REF:ENCODED_PASSWORD@POOLER_HOST:5432/postgres?sslmode=require'`. Every uppercase value is a placeholder. Never paste the real URL into frontend code, the repo, or chat.
-4. To transfer existing FCOA data into a **new, empty** Supabase database, run `python -m scripts.migrate_demo exams.db "$env:DATABASE_URL" --apply`. This sends existing users, bets and balances to Supabase; review the transfer before running it. For a blank database, skip migration and start the app; it creates tables automatically.
-5. With `DATABASE_URL` still set, run `python -m scripts.bootstrap_admin --email YOUR_ADMIN@somaiya.edu`, configure production settings below, then start Uvicorn. Question-paper files need a persistent `UPLOAD_DIR`; Postgres stores their hashes and paths, not file bytes.
+PaperCall runs as three hosted services:
 
-Postgres tables are created with Row Level Security enabled and no browser policies. Keep the database URL and privileged keys on the server. No Supabase API key is needed for the database connection.
+1. **Frontend:** Vercel hosts the Next.js app and serves the website to players.
+2. **API:** a Node.js host runs the Fastify server as a persistent service.
+3. **Database and auth:** Supabase provides PostgreSQL and Supabase Auth.
 
-## Production configuration
+Players visit the Vercel domain. Next.js forwards `/api/*` requests to the hosted Fastify API, so the API origin does not need to appear in page links.
 
-Set `APP_ENV=production`, a long random `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `DATABASE_URL`, and a persistent `UPLOAD_DIR`. Leave `PILOT_MODE` and `PILOT_ADMIN_CODE` unset; production rejects either setting. Serve the app behind HTTPS and keep Uvicorn bound to a private address. Startup refuses production mode if SMTP or the OTP secret is missing. `.env.example` lists variables; do not commit real values.
+## Deployment
 
-For local SQLite, back up with `python -m scripts.backup_db pilot.db backups/pilot-YYYY-MM-DD.db`. Stop the server before restoring and preserve the current DB separately. For Supabase, use its database backup facilities. Keep one server process for this pilot: IP rate limits are currently in process memory.
+### 1. Create and configure Supabase
 
-## Project structure
+Created a SUPABASE Database, migrated the schema, made tables, RLS for every table, etc.
+
+### 2. Deploy the Fastify API
+
+Fastify API was deployed as a separate service from the frontend, using the same repository with the backend directory as its root. Configured it to use Supabase for PostgreSQL and authentication, then applied the prisma migrations before the API started serving requests.
+
+### 3. Deploy the frontend to Vercel
+
+Had to deploy Front-End and Back-End separately, though having the same repo but different root.
+
+### 4. Apply database migrations
+
+Before the API starts serving traffic, ran the release command from the `backend` with the API host's production environment. It applies the checked-in Prisma migrations to Supabase. The build command generates prisma Client; `db:deploy` applies existing migrations without creating new ones.
+
+### Deployment checklist, what I had to do. (and learn for the first time)
+
+- The frontend loads from the Vercel domain.
+- The API health endpoint responds at `/` on the API origin.
+- `FASTIFY_URL` points to the deployed API origin.
+- Email/password and Google sign-in return to the deployed `/login` URL.
+- Supabase redirect allowlist and Google OAuth origin use the deployed domain.
+- Database migrations have been applied.
+- Pilot mode and `PILOT_ADMIN_CODE` are disabled.
+- Uploaded file storage persists across API restarts, if uploads are enabled.
+
+## Repository file structure
 
 ```text
-ExamsMinigame/
-├── app/          # FastAPI routes and business rules
-├── frontend/     # index.html, app.js and app.css
-├── scripts/      # migration, admin setup and backup commands
-├── tests/        # automated behavior tests
-├── uploads/      # uploaded question papers (created when needed)
-├── .env.example
-├── .gitignore
-├── requirements.txt
-└── README.md
+backend/
+  prisma/       Database schema and migrations
+  scripts/      Admin account setup
+  src/          Fastify routes, auth, markets, and settlement
+frontend/
+  app/          Next.js routes and pages
+  components/   Shared UI components
+  lib/          API client, Supabase client, and helpers
 ```
-
-## Tests
-
-```powershell
-python -m pytest -q --basetemp=.pytest_run
-node --check frontend/app.js
-```
-
-The original `exams.db` remains available as migration input. The current app uses `pilot.db` locally.
+### See you before the exam starts!

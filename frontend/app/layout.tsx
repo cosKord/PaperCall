@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Points-only exam prediction rooms",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode; }>) {
   return (
     <html lang="en">
       <body>{children}</body>

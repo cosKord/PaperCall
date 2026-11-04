@@ -52,7 +52,7 @@ describe("ProfilePage", () => {
     expect(await screen.findByText(/no settled predictions yet/i)).toBeInTheDocument();
   });
 
-  it("logs out through FastAPI and returns to login", async () => {
+  it("logs out through the API and returns to login", async () => {
     const user = userEvent.setup();
     render(<ProfilePage />);
     await user.click(await screen.findByRole("button", { name: /log out/i }));

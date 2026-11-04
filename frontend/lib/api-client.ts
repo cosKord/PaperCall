@@ -1,5 +1,12 @@
 type ApiErrorBody = { detail?: string };
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export function getCsrfToken(): string {
   if (typeof document === "undefined") return "";
   const token = document.cookie
@@ -40,7 +47,7 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
     const detail = typeof body === "object" && body !== null
       ? (body as ApiErrorBody).detail
       : String(body || "");
-    throw new Error(detail || `Request failed (${response.status})`);
+    throw new ApiError(detail || `Request failed (${response.status})`, response.status);
   }
 
   return body as T;

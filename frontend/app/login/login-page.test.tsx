@@ -27,6 +27,7 @@ describe("LoginPage", () => {
     render(<LoginPage />);
 
     await user.type(screen.getByLabelText(/college email/i), "alice@somaiya.edu");
+    await user.selectOptions(screen.getByLabelText(/^branch$/i), "CSE");
     await user.click(screen.getByRole("button", { name: /send login code/i }));
 
     expect(apiMock).toHaveBeenCalledWith("/api/auth/request-code", expect.objectContaining({ method: "POST" }));
@@ -43,6 +44,7 @@ describe("LoginPage", () => {
     render(<LoginPage />);
 
     await user.type(screen.getByLabelText(/college email/i), "alice@somaiya.edu");
+    await user.selectOptions(screen.getByLabelText(/^branch$/i), "CSE");
     await user.click(screen.getByRole("button", { name: /send login code/i }));
     await user.type(screen.getByLabelText(/login code/i), "123456");
     await user.click(screen.getByRole("button", { name: /verify code/i }));
@@ -60,6 +62,7 @@ describe("LoginPage", () => {
     render(<LoginPage />);
 
     await user.type(screen.getByLabelText(/college email/i), "admin@somaiya.edu");
+    await user.selectOptions(screen.getByLabelText(/^branch$/i), "CSE");
     await user.click(screen.getByRole("button", { name: /send login code/i }));
     await user.type(screen.getByLabelText(/login code/i), "123456");
     await user.click(screen.getByRole("button", { name: /verify code/i }));
