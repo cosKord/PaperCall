@@ -6,23 +6,12 @@
       "framework": "fastify",
       "entrypoint": "src/server.js"
     },
-    "backend_probe": {
-      "root": "backend/",
-      "framework": "fastify",
-      "entrypoint": "src/probe.js"
-    },
     "frontend": {
       "root": "frontend/",
       "framework": "nextjs"
     }
   },
   "rewrites": [
-    {
-      "source": "/api-diagnostic/(.*)",
-      "destination": {
-        "service": "backend_probe"
-      }
-    },
     {
       "source": "/api/(.*)",
       "destination": {
