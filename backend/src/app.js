@@ -18,8 +18,8 @@ import { AppError, badRequest, balance, branches, loadBranches, notFound, prisma
 
 const pilotMode = process.env.PILOT_MODE === "1";
 const app = Fastify({ logger: true, bodyLimit: 12 * 1024 * 1024 });
-await app.register(cookie);
-await app.register(multipart, { limits: { files: 1, fileSize: 10 * 1024 * 1024 + 1 } });
+app.register(cookie);
+app.register(multipart, { limits: { files: 1, fileSize: 10 * 1024 * 1024 + 1 } });
 
 const attempts = new Map();
 function limit(request, key, allowed, windowSeconds = 60) {
