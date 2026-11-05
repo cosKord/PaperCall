@@ -7,9 +7,9 @@
       "entrypoint": "src/server.js"
     },
     "backend_probe": {
-      "root": "backend-probe/",
+      "root": "backend/",
       "framework": "fastify",
-      "entrypoint": "src/server.js"
+      "entrypoint": "src/probe.js"
     },
     "frontend": {
       "root": "frontend/",
