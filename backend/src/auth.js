@@ -3,6 +3,7 @@ import {
   badRequest,
   branches,
   forbidden,
+  loadBranches,
   prisma,
   secureToken,
   sha256,
@@ -40,6 +41,7 @@ export async function createAppSession(accessToken, branch) {
   }
 
   const normalizedBranch = branch ? String(branch).trim().toUpperCase() : null;
+  if (normalizedBranch) await loadBranches();
   if (normalizedBranch && !branches.has(normalizedBranch)) throw badRequest("Choose a valid branch");
   const user = await prisma.$transaction(async (tx) => {
     let account = await tx.user.findUnique({ where: { supabaseUserId: authUserId } });

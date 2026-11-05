@@ -14,17 +14,13 @@ import { addTopic, claimGrant, claimWelcomeGrant, createMarket, lockMarket, plac
 import { attachPaper, confirmSettlement, previewSettlement, settleConfirmed } from "./settlement.js";
 import { createBranch, deleteBranch, renameBranch } from "./branches.js";
 import { leaderboard, marketView, profileView } from "./views.js";
-import { AppError, badRequest, balance, branches, notFound, prisma, secureToken, serialize, sha256 } from "./lib.js";
+import { AppError, badRequest, balance, branches, loadBranches, notFound, prisma, secureToken, serialize, sha256 } from "./lib.js";
 
 const pilotMode = process.env.PILOT_MODE === "1";
 configureProduction(pilotMode);
 const app = Fastify({ logger: true, bodyLimit: 12 * 1024 * 1024 });
 await app.register(cookie);
 await app.register(multipart, { limits: { files: 1, fileSize: 10 * 1024 * 1024 + 1 } });
-
-for (const branch of await prisma.branch.findMany({ select: { name: true } })) {
-  branches.add(branch.name);
-}
 
 const attempts = new Map();
 function limit(request, key, allowed, windowSeconds = 60) {
@@ -99,11 +95,7 @@ app.get("/", async () => ({ name: "ExamsMinigame API", ok: true }));
 app.get("/api/time", async () => ({ now: new Date().toISOString(), pilot_admin_code_enabled: Boolean(pilotMode && process.env.PILOT_ADMIN_CODE) }));
 
 app.get("/api/branches", async () => {
-  const rows = await prisma.branch.findMany({
-    select: { name: true },
-    orderBy: { name: "asc" },
-  });
-  return rows.map((branch) => branch.name);
+  return loadBranches();
 });
 
 app.post("/api/auth/supabase-session", async (request, reply) => {
@@ -154,6 +146,7 @@ app.patch("/api/profile", async (request) => {
   const body = parse(profileInput, request.body);
   const branch = body.branch.trim().toUpperCase();
   const username = body.username.trim();
+  await loadBranches();
   if (!branches.has(branch)) throw badRequest("Choose a valid branch");
   if (!/^[A-Za-z0-9_-]+$/.test(username)) throw badRequest("Username can use letters, numbers, hyphens and underscores");
   const taken = await prisma.user.findFirst({ where: { username, id: { not: session.userId } } });

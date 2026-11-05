@@ -1,6 +1,7 @@
-import { badRequest, balance, branches, marketPhase, prisma } from "./lib.js";
+import { badRequest, balance, branches, loadBranches, marketPhase, prisma } from "./lib.js";
 
 export async function createMarket(adminId, body) {
+  await loadBranches();
   const subject = String(body.subject || "").trim();
   const startsAt = new Date(body.starts_at);
   const endsAt = new Date(body.ends_at);
