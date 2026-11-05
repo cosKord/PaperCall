@@ -3,7 +3,13 @@
   "services": {
     "backend": {
       "root": "backend/",
-      "framework": "fastify"
+      "framework": "fastify",
+      "entrypoint": "src/server.js"
+    },
+    "backend_probe": {
+      "root": "backend-probe/",
+      "framework": "fastify",
+      "entrypoint": "src/server.js"
     },
     "frontend": {
       "root": "frontend/",
@@ -11,6 +17,12 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api-diagnostic/(.*)",
+      "destination": {
+        "service": "backend_probe"
+      }
+    },
     {
       "source": "/api/(.*)",
       "destination": {
