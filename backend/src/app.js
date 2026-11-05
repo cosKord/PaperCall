@@ -91,7 +91,11 @@ const branchInput = z.object({
 
 app.get("/", async () => ({ name: "ExamsMinigame API", ok: true }));
 
-app.get("/api/time", async () => ({ now: new Date().toISOString(), pilot_admin_code_enabled: Boolean(pilotMode && process.env.PILOT_ADMIN_CODE) }));
+app.get("/api/time", async () => ({
+  now: new Date().toISOString(),
+  pilot_admin_code_enabled: Boolean(pilotMode && process.env.PILOT_ADMIN_CODE),
+  admin_access_code_enabled: Boolean(process.env.APP_ENV === "production" && process.env.ADMIN_ACCESS_CODE),
+}));
 
 app.get("/api/branches", async () => {
   return loadBranches();

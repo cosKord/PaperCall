@@ -62,7 +62,7 @@ Before the API starts serving traffic, ran the release command from the `backend
 - Email/password and Google sign-in return to the deployed `/login` URL.
 - Supabase redirect allowlist and Google OAuth origin use the deployed domain.
 - Database migrations have been applied.
-- Pilot mode and `PILOT_ADMIN_CODE` are disabled.
+- `APP_ENV=production`, Supabase Auth variables, and `ADMIN_ACCESS_CODE` are configured on the backend. `ADMIN_ACCESS_CODE` is a private fixed admin second-factor secret; pilot settings remain disabled.
 - Uploaded file storage persists across API restarts, if uploads are enabled.
 
 ## Repository file structure

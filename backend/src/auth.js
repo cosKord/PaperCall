@@ -94,8 +94,12 @@ export async function requireAdmin(request, db = prisma, requireSecondFactor = t
 
 export async function verifyAdminCode(request, code, pilotMode) {
   const session = await requireAdmin(request, prisma, false);
-  if (pilotMode && process.env.PILOT_ADMIN_CODE) {
-    if (!timingSafeEqual(code, process.env.PILOT_ADMIN_CODE)) throw forbidden("Invalid admin code");
+  const productionCode = process.env.APP_ENV === "production"
+    ? process.env.ADMIN_ACCESS_CODE
+    : null;
+  const fixedCode = productionCode || (pilotMode ? process.env.PILOT_ADMIN_CODE : null);
+  if (fixedCode) {
+    if (!timingSafeEqual(code, fixedCode)) throw forbidden("Invalid admin code");
   } else if (!session.user.totpSecret || !verifyTotp(session.user.totpSecret, code)) {
     throw forbidden("Invalid admin code");
   }
@@ -113,5 +117,8 @@ export function configureProduction(pilotMode) {
   const required = ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY"];
   if (pilotMode || process.env.PILOT_ADMIN_CODE || !required.every((key) => process.env[key])) {
     throw new AppError(500, "Production requires Supabase Auth configuration; pilot settings must be off");
+  }
+  if (!process.env.ADMIN_ACCESS_CODE) {
+    throw new AppError(500, "Production requires ADMIN_ACCESS_CODE for admin second-factor verification");
   }
 }
