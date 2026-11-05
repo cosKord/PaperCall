@@ -370,6 +370,6 @@ app.get("/api/markets/:marketId/paper", async (request, reply) => {
   return sendFile(reply, market.paperPath, path.basename(market.paperPath));
 });
 
-const port = Number(process.env.PORT || 8000);
-const host = process.env.HOST || "127.0.0.1";
-await app.listen({ port, host });
+const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST;
+await app.listen(host ? { port, host } : { port });
