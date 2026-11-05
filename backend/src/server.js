@@ -17,7 +17,6 @@ import { leaderboard, marketView, profileView } from "./views.js";
 import { AppError, badRequest, balance, branches, loadBranches, notFound, prisma, secureToken, serialize, sha256 } from "./lib.js";
 
 const pilotMode = process.env.PILOT_MODE === "1";
-configureProduction(pilotMode);
 const app = Fastify({ logger: true, bodyLimit: 12 * 1024 * 1024 });
 await app.register(cookie);
 await app.register(multipart, { limits: { files: 1, fileSize: 10 * 1024 * 1024 + 1 } });
@@ -99,6 +98,7 @@ app.get("/api/branches", async () => {
 });
 
 app.post("/api/auth/supabase-session", async (request, reply) => {
+  configureProduction(pilotMode);
   limit(request, "supabase_session", 30, 60);
   const body = parse(supabaseSessionInput, request.body);
   const session = await createAppSession(body.access_token, body.branch);
@@ -110,6 +110,7 @@ app.post("/api/auth/supabase-session", async (request, reply) => {
 });
 
 app.post("/api/auth/admin-totp", async (request) => {
+  configureProduction(pilotMode);
   requireCsrf(request);
   const { code } = parse(totpInput, request.body);
   limit(request, `admin_totp:${(request.cookies.session || "").slice(0, 12)}`, 5, 600);
