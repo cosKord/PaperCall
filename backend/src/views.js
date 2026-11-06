@@ -79,6 +79,10 @@ export async function marketView(userId, marketId, db = prisma) {
   return result;
 }
 
+export async function marketViews(userId, marketIds, db = prisma) {
+  return Promise.all(marketIds.map((marketId) => marketView(userId, marketId, db)));
+}
+
 export async function profileView(userId, db = prisma) {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -90,6 +94,7 @@ export async function profileView(userId, db = prisma) {
   if (!user) throw badRequest("User not found");
   const settled = user.bets.filter((bet) => bet.topic.market.status === "settled");
   const active = user.bets.filter((bet) => bet.topic.market.status !== "settled");
+  const scored = settled.filter((bet) => bet.topic.outcome !== "void");
   const rankings = await leaderboard(db);
   const rank = rankings.findIndex((row) => row.userId === user.id) + 1;
   return {
@@ -101,13 +106,13 @@ export async function profileView(userId, db = prisma) {
       academic_year: user.profile?.academicYear || null,
       branch: user.branch,
       balance: await balance(db, user.id),
-      avatar_url: user.profile?.avatarPath ? `/api/profile/avatar?v=${user.profile.updatedAt.toISOString()}` : null,
+      xp: user.xp,
     },
     score: settled.reduce((sum, bet) => sum + bet.payout - bet.stake, 0),
     rank,
     prediction_count: user.bets.length,
     subject_count: new Set(user.bets.map((bet) => bet.topic.marketId)).size,
-    success_rate: settled.length ? Math.round(100 * settled.filter((bet) => bet.side === bet.topic.outcome).length / settled.length) : 0,
+    success_rate: scored.length ? Math.round(100 * scored.filter((bet) => bet.side === bet.topic.outcome).length / scored.length) : 0,
     active_bets: active.map((bet) => ({
       market_id: bet.topic.marketId, subject: bet.topic.market.subject, exam_type: bet.topic.market.examType, topic_id: bet.topicId,
       topic: bet.topic.title, side: bet.side, stake: bet.stake,

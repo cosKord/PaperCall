@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import { BrandName } from "@/components/brand-name";
 import { ArrowRight, Check, Coins } from "@/components/icons";
@@ -6,6 +7,7 @@ import { PageTransition } from "@/components/page-transition";
 import { PoolDistribution } from "@/components/pool-distribution";
 import { PayoutEstimate } from "@/components/payout-estimate";
 import { PixelStarField } from "@/components/pixel-star-field";
+import { RankIcon } from "@/components/rank-icons";
 import { TicketSlipHero } from "@/components/hero-text-containers";
 import { InteractiveSurface } from "@/components/interactive-surface";
 import { SiteFooter } from "@/components/site-footer";
@@ -22,9 +24,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2.5 text-[1.08rem] font-black tracking-tight no-underline"
             href="/"
           >
-            <span className="grid size-9 place-items-center border-2 border-ink bg-acid text-ink shadow-[2px_2px_0_#111]">
-              P
-            </span>
+            <Image className="size-9 border-2 border-ink shadow-[2px_2px_0_#111]" src="/images/papercall-logo.png" alt="" width={36} height={36} priority />
             <BrandName />
           </Link>
           <Link
@@ -59,7 +59,7 @@ export default function LandingPage() {
           </div>
           <InteractiveSurface label="Example exam prediction card" className="w-full max-w-[780px] justify-self-start max-[900px]:justify-self-center">
           <div
-            className="landing-hero-art relative z-10 grid min-h-[520px] w-full place-items-center border-2 border-ink bg-[#b9a0ff] shadow-[8px_8px_0_#111] -rotate-1 max-sm:min-h-[390px] max-sm:rotate-0"
+            className="landing-hero-art relative z-10 grid min-h-[520px] w-full place-items-center border-2 border-ink bg-[#b9a0ff] shadow-[8px_8px_0_#111] -rotate-0 max-sm:min-h-[390px] max-sm:rotate-0"
             aria-label="An example exam prediction"
           >
             <span className="landing-hero-halftone" aria-hidden="true" />
@@ -132,8 +132,9 @@ export default function LandingPage() {
               Walk into your branch room.
             </h2>
             <p className="max-w-[48ch] text-[1.08rem] leading-7 text-ink-soft">
-              Every active subject, every prediction market, one clean place.
-              Call a topic or a specific question, for each subject, for each exam.
+              Step onto your branch floor. Track live markets for your syllabus,
+              call which topics will appear before the paper drops, and see
+              where your batchmates are putting their points.
             </p>
           </div>
         </section>
@@ -150,7 +151,8 @@ export default function LandingPage() {
                 Points from Hit and Miss calls form a shared pool. If your side
                 wins, its callers split the pool in proportion to their calls.
                 The estimate includes your proposed points and moves as the
-                pool changes, until calls lock.
+                pool changes, until calls lock. 
+                Still working on this, suggestions are welcome.
               </p>
             </div>
             <InteractiveSurface label="Example pool and payout card" className="w-full">
@@ -169,6 +171,19 @@ export default function LandingPage() {
             </div>
             </InteractiveSurface>
           </div>
+          <article className="mx-auto mt-8 grid max-w-[1220px] gap-4 border-2 border-ink bg-[#e9e3ff] p-[clamp(18px,3vw,28px)] shadow-[5px_5px_0_#111] sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <h3 className="mb-3 mt-0 text-3xl font-black">Build XP. Rank up. Insane aura points.</h3>
+              <p className="mb-0 max-w-[62ch] leading-relaxed text-ink-soft">
+                Every call adds to your progress. Level up through Newbie, Risk enjoyer, Gamblers spirit, Prophet, and Oracle as your prediction record grows.
+              </p>
+            </div>
+            <div className="flex items-center gap-2" aria-label="Five XP ranks">
+              {[0, 1, 2, 3, 4].map((level) => (
+                <RankIcon key={level} level={level} className="size-10 p-2 shadow-[2px_2px_0_#111]" />
+              ))}
+            </div>
+          </article>
         </section>
         <SiteFooter />
       </main>

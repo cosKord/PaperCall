@@ -13,8 +13,8 @@ import {
 import { addTopic, claimGrant, claimWelcomeGrant, createMarket, lockMarket, placeBet, publishMarket } from "./markets.js";
 import { attachPaper, confirmSettlement, previewSettlement, settleConfirmed } from "./settlement.js";
 import { createBranch, deleteBranch, renameBranch } from "./branches.js";
-import { leaderboard, marketView, profileView } from "./views.js";
-import { AppError, badRequest, balance, branches, loadBranches, notFound, prisma, secureToken, serialize, sha256 } from "./lib.js";
+import { leaderboard, marketView, marketViews, profileView } from "./views.js";
+import { AppError, badRequest, balance, loadBranches, notFound, prisma, secureToken, sha256 } from "./lib.js";
 
 const pilotMode = process.env.PILOT_MODE === "1";
 const app = Fastify({ logger: true, bodyLimit: 12 * 1024 * 1024 });
@@ -22,13 +22,33 @@ app.register(cookie);
 app.register(multipart, { limits: { files: 1, fileSize: 10 * 1024 * 1024 + 1 } });
 
 const attempts = new Map();
+const MAX_RATE_LIMIT_IDENTITIES = 10_000;
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = 60_000;
+let lastRateLimitCleanupAt = 0;
+
+function pruneRateLimitAttempts(now) {
+  if (attempts.size < MAX_RATE_LIMIT_IDENTITIES && now - lastRateLimitCleanupAt < RATE_LIMIT_CLEANUP_INTERVAL_MS) return;
+
+  for (const [identity, bucket] of attempts) {
+    if (bucket.expiresAt <= now) attempts.delete(identity);
+  }
+  lastRateLimitCleanupAt = now;
+
+  while (attempts.size >= MAX_RATE_LIMIT_IDENTITIES) {
+    attempts.delete(attempts.keys().next().value);
+  }
+}
+
 function limit(request, key, allowed, windowSeconds = 60) {
   const identity = `${key}:${request.ip}`;
   const now = Date.now();
-  const recent = (attempts.get(identity) || []).filter((time) => now - time < windowSeconds * 1000);
+  const windowMs = windowSeconds * 1000;
+  pruneRateLimitAttempts(now);
+  const recent = (attempts.get(identity)?.timestamps || []).filter((time) => now - time < windowMs);
   if (recent.length >= allowed) throw new AppError(429, "Too many requests; try again later");
   recent.push(now);
-  attempts.set(identity, recent);
+  attempts.delete(identity);
+  attempts.set(identity, { timestamps: recent, expiresAt: now + windowMs });
 }
 
 function parse(schema, value) {
@@ -83,7 +103,7 @@ const marketInput = z.object({
   subject: z.string(), exam_type: z.string(), starts_at: z.string(), ends_at: z.string(),
   home_branches: z.array(z.string()), branch_starts: z.record(z.string(), z.string()),
   grant_pts: z.number().int().nullable().optional(), min_stake: z.number().int().default(1),
-  away_min_stake: z.number().int().default(10), low_cap_pct: z.number().int().default(20), high_cap_pct: z.number().int().default(40),
+  away_min_stake: z.number().int().default(10),
 });
 const branchInput = z.object({
   name: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9][A-Za-z0-9 _-]*$/),
@@ -132,13 +152,11 @@ app.post("/api/auth/logout", async (request, reply) => {
 
 app.get("/api/me", async (request) => {
   const session = await currentSession(request);
-  const profile = await prisma.profileDetail.findUnique({ where: { userId: session.userId } });
   return {
     id: session.user.id, email: session.user.email,
     username: session.user.username || session.user.email.split("@", 1)[0], role: session.user.role,
     branch: session.user.branch, balance: await balance(prisma, session.userId),
     welcome_grant_available: session.user.role === "player" && !session.user.welcomeGrantClaimedAt,
-    avatar_url: profile?.avatarPath ? `/api/profile/avatar?v=${profile.updatedAt.toISOString()}` : null,
     admin_verified: session.adminVerified,
   };
 });
@@ -151,8 +169,11 @@ app.patch("/api/profile", async (request) => {
   const body = parse(profileInput, request.body);
   const branch = body.branch.trim().toUpperCase();
   const username = body.username.trim();
-  await loadBranches();
-  if (!branches.has(branch)) throw badRequest("Choose a valid branch");
+  const availableBranches = await loadBranches();
+  if (!availableBranches.includes(branch)) throw badRequest("Choose a valid branch");
+  if (session.user.branch && branch !== session.user.branch.trim().toUpperCase()) {
+    throw badRequest("Your branch is locked after selection. Ask an admin to change it.");
+  }
   if (!/^[A-Za-z0-9_-]+$/.test(username)) throw badRequest("Username can use letters, numbers, hyphens and underscores");
   const taken = await prisma.user.findFirst({ where: { username, id: { not: session.userId } } });
   if (taken) throw badRequest("That username is already taken");
@@ -167,36 +188,6 @@ app.patch("/api/profile", async (request) => {
   return profileView(session.userId);
 });
 
-app.post("/api/profile/avatar", async (request) => {
-  requireCsrf(request);
-  const session = await currentSession(request);
-  const file = await request.file();
-  if (!file) throw badRequest("Upload a PNG, JPEG or WebP image up to 3 MB");
-  const content = await file.toBuffer();
-  const png = content.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-  const jpeg = content.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
-  const webp = content.subarray(0, 4).toString() === "RIFF" && content.subarray(8, 12).toString() === "WEBP";
-  if (!content.length || content.length > 3 * 1024 * 1024 || (!png && !jpeg && !webp)) throw badRequest("Upload a PNG, JPEG or WebP image up to 3 MB");
-  const suffix = png ? ".png" : jpeg ? ".jpg" : ".webp";
-  const directory = path.join(process.env.UPLOAD_DIR || path.resolve("..", "uploads"), "avatars");
-  await fs.mkdir(directory, { recursive: true });
-  const avatarPath = path.join(directory, `${session.userId}-${sha256(content)}${suffix}`);
-  await fs.writeFile(avatarPath, content);
-  const now = new Date();
-  await prisma.profileDetail.upsert({
-    where: { userId: session.userId }, update: { avatarPath, updatedAt: now },
-    create: { userId: session.userId, avatarPath, updatedAt: now },
-  });
-  return { avatar_url: `/api/profile/avatar?v=${now.toISOString()}` };
-});
-
-app.get("/api/profile/avatar", async (request, reply) => {
-  const session = await currentSession(request);
-  const profile = await prisma.profileDetail.findUnique({ where: { userId: session.userId } });
-  if (!profile?.avatarPath) throw notFound();
-  return sendFile(reply, profile.avatarPath);
-});
-
 app.post("/api/bug-reports", async (request) => {
   requireCsrf(request);
   const session = await currentSession(request);
@@ -208,11 +199,14 @@ app.post("/api/bug-reports", async (request) => {
 app.get("/api/markets", async (request) => {
   const session = await currentSession(request);
   const branch = request.query?.branch ? String(request.query.branch).trim().toUpperCase() : null;
+  const includeTopics = String(request.query?.include_topics || "") === "1";
   const markets = await prisma.market.findMany({
     where: session.user.role === "admin" ? {} : { status: { not: "draft" }, legacy: false },
     orderBy: { id: "desc" },
   });
-  return markets.filter((market) => !branch || (Array.isArray(market.homeBranches) && market.homeBranches.map(String).map((item) => item.toUpperCase()).includes(branch))).map((market) => ({
+  const visibleMarkets = markets.filter((market) => !branch || (Array.isArray(market.homeBranches) && market.homeBranches.map(String).map((item) => item.toUpperCase()).includes(branch)));
+  if (includeTopics) return marketViews(session.userId, visibleMarkets.map((market) => market.id));
+  return visibleMarkets.map((market) => ({
     id: market.id, subject: market.subject, exam_type: market.examType, lockout_at: market.lockoutAt.toISOString(), status: market.status,
   }));
 });
@@ -327,15 +321,7 @@ app.get("/api/admin/users/:userId/profile", async (request) => {
   await requireAdmin(request); const userId = integerParam(request, "userId");
   const user = await prisma.user.findFirst({ where: { id: userId, role: "player", active: true } });
   if (!user) throw badRequest("Active player not found");
-  const profile = await profileView(userId);
-  if (profile.user.avatar_url) profile.user.avatar_url = `/api/admin/users/${userId}/avatar`;
-  return profile;
-});
-
-app.get("/api/admin/users/:userId/avatar", async (request, reply) => {
-  await requireAdmin(request); const userId = integerParam(request, "userId");
-  const profile = await prisma.profileDetail.findUnique({ where: { userId } });
-  if (!profile?.avatarPath) throw notFound(); return sendFile(reply, profile.avatarPath);
+  return profileView(userId);
 });
 
 app.post("/api/admin/users/:userId/balance-adjustments", async (request) => {
@@ -347,6 +333,18 @@ app.post("/api/admin/users/:userId/balance-adjustments", async (request) => {
     await tx.ledger.create({ data: { userId, amount: body.amount, reason: "admin_adjustment" } });
     await tx.auditLog.create({ data: { actorId: admin.userId, action: "adjust_balance", detail: { user_id: userId, amount: body.amount, reason: body.reason.trim() } } });
     return { balance: await balance(tx, userId) };
+  });
+});
+
+app.post("/api/admin/users/:userId/xp-adjustments", async (request) => {
+  requireCsrf(request); const admin = await requireAdmin(request); const userId = integerParam(request, "userId");
+  const body = parse(z.object({ xp: z.number().int().min(0).max(1000000), reason: z.string().min(3).max(240) }), request.body);
+  const player = await prisma.user.findFirst({ where: { id: userId, role: "player", active: true } });
+  if (!player) throw badRequest("Active player not found");
+  return prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId }, data: { xp: body.xp } });
+    await tx.auditLog.create({ data: { actorId: admin.userId, action: "set_xp", detail: { user_id: userId, previous_xp: player.xp, xp: body.xp, reason: body.reason.trim() } } });
+    return { xp: body.xp };
   });
 });
 

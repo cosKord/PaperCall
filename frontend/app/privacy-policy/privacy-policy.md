@@ -46,8 +46,8 @@ We use your data only for these purposes. We do not sell it.
 
 | Who | What they can see |
 |---|---|
-| Other players | Your username and your standing on the leaderboard. [confirm: whether branch is shown] |
-| Other players | They cannot see your name, email, or your individual calls. [confirm] |
+| Other players | Your username and your standing on the leaderboard. |
+| Other players | They cannot see your name, email, or your individual calls. |
 | Game admins | Account details (name, email, branch, year), your calls and your points history, because they run and settle the game |
 | Only you | Your own profile, calls and stats |
 
@@ -56,7 +56,7 @@ We use your data only for these purposes. We do not sell it.
 We share data only with the services that help us run PaperCall:
 - **Database and authentication:** Supabase
 - **Hosting:** Vercel
-- **Google sign-in:** Google, if you choose that option
+- **Google sign-in:** Google
 
 These providers process data on our behalf and only to provide their service. They may store it on servers outside India, in EU. We may also disclose data if the law requires it, or if needed to protect the game and its players from serious abuse.
 
@@ -81,8 +81,6 @@ You can ask us to:
 - Delete it, by deleting your account
 - Withdraw your consent
 - Handle a complaint about how we treated your data
-
-To use any of these, email [contact email] from the email address associated with your account. We aim to reply within [30] days. If you are not satisfied with our response, you can also complain to the Data Protection Board of India once its processes are in effect.
 
 ## 8. Cookies
 

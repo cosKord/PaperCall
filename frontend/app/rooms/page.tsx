@@ -11,17 +11,9 @@ import { LeaderboardPanel } from "@/components/leaderboard-panel";
 import { PageTransition } from "@/components/page-transition";
 import { apiFetch } from "@/lib/api-client";
 import { displayName } from "@/lib/branches";
+import { branchBorderClass } from "@/lib/branch-colors";
 import { useBranches } from "@/lib/use-branches";
 import type { AdminUser, Me } from "@/types/api";
-
-const branchColors: Record<string, string> = {
-  IT: "border-t-[#4285ff]",
-  CSE: "border-t-[#16b989]",
-  AIDS: "border-t-[#f05a50]",
-  CSBS: "border-t-[#9254df]",
-  MECH: "border-t-[#3977a8]",
-  CCE: "border-t-[#f2a323]",
-};
 
 function BranchGrid({
   branches,
@@ -36,7 +28,7 @@ function BranchGrid({
     <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-2 max-[440px]:grid-cols-1">
       {branches.map((branch, index) => (
         <article
-          className={`relative z-0 border-2 border-ink border-t-[7px] bg-white text-ink shadow-[5px_5px_0_#111] transition-transform hover:z-20 hover:-translate-y-1 focus-within:z-20 ${branchColors[branch] ?? ["border-t-[#4285ff]", "border-t-[#16b989]", "border-t-[#f05a50]", "border-t-[#9254df]", "border-t-[#3977a8]", "border-t-[#f2a323]"][index % 6]}`}
+          className={`pressable-card relative z-0 border-2 border-ink border-t-[7px] bg-white text-ink shadow-[5px_5px_0_#111] transition-transform hover:z-20 hover:-translate-y-1 focus-within:z-20 ${branchBorderClass(branch, index)}`}
           key={branch}
         >
           {admin && onChanged && <AdminBranchMenu branch={branch} onChanged={onChanged} />}
@@ -55,10 +47,14 @@ function BranchGrid({
 }
 
 function PlayerDashboard({ user }: { user: Me }) {
-  const { branches } = useBranches();
+  const { branches, loaded } = useBranches();
+  const homeBranch = user.branch?.trim().toUpperCase();
+  const yourRoom = homeBranch ? branches.filter((branch) => branch === homeBranch) : [];
+  const otherRooms = branches.filter((branch) => branch !== homeBranch);
+
   return (
     <PageTransition>
-      <div className="min-h-screen bg-paper">
+      <div className="min-h-screen bg-[repeating-linear-gradient(to_bottom,#fffbe8_0px,#fffbe8_3px,rgba(17,17,17,0.025)_3px,rgba(17,17,17,0.025)_4px)]">
         <DashboardHeader user={user} showWelcomeGrant />
         <section className="mx-auto w-[min(1540px,calc(100%-40px))] py-[clamp(34px,5vw,64px)]">
           <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[.18em] text-ink-soft">
@@ -69,17 +65,34 @@ function PlayerDashboard({ user }: { user: Me }) {
           </h1>
           <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-[clamp(24px,3vw,40px)] max-[1100px]:grid-cols-1">
             <div className="w-full min-w-0">
-              <div className="mb-[18px] flex items-end justify-between gap-5">
-                <h2 className="m-0 font-mono text-sm font-bold uppercase tracking-widest">
-                  Available rooms
-                </h2>
-                {user.branch && (
-                  <span className="font-bold text-ink-soft">
-                    Your branch: {user.branch}
-                  </span>
-                )}
-              </div>
-              <BranchGrid branches={branches} />
+              {!loaded ? (
+                <p className="m-0 font-bold text-ink-soft">Loading rooms…</p>
+              ) : (
+                <>
+                  {yourRoom.length > 0 && (
+                    <section aria-labelledby="your-room-heading">
+                      <h2 id="your-room-heading" className="mb-[18px] font-mono text-sm font-bold uppercase tracking-widest">
+                        Your room
+                      </h2>
+                      <BranchGrid branches={yourRoom} />
+                    </section>
+                  )}
+
+                  <section
+                    aria-labelledby="other-rooms-heading"
+                    className={yourRoom.length > 0 ? "mt-8 border-t-2 border-ink pt-3" : ""}
+                  >
+                    <h2 id="other-rooms-heading" className="mb-[18px] font-mono text-sm font-bold uppercase tracking-widest">
+                      Other rooms
+                    </h2>
+                    {otherRooms.length > 0 ? (
+                      <BranchGrid branches={otherRooms} />
+                    ) : (
+                      <p className="m-0 text-ink-soft">No other rooms are available yet.</p>
+                    )}
+                  </section>
+                </>
+              )}
             </div>
             <div className="pt-[37px] max-[1100px]:pt-0">
               <LeaderboardPanel />
@@ -150,7 +163,7 @@ function AdminDashboard({ user }: { user: Me }) {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-paper">
+      <div className="min-h-screen bg-[repeating-linear-gradient(to_bottom,#fffbe8_0px,#fffbe8_3px,rgba(17,17,17,0.025)_3px,rgba(17,17,17,0.025)_4px)]">
         <DashboardHeader user={user} />
         <main className="mx-auto w-[min(1540px,calc(100%-40px))] py-[clamp(34px,5vw,64px)]">
           <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[.18em] text-ink-soft">
@@ -189,10 +202,6 @@ function AdminDashboard({ user }: { user: Me }) {
                 <div className="mb-5 flex items-end justify-between gap-5 max-sm:flex-col max-sm:items-start">
                   <div>
                     <h2 className="m-0 text-xl">Users</h2>
-                    <p className="mb-0 text-ink-soft">
-                      Inspect access without changing anyone&apos;s selected
-                      branch.
-                    </p>
                   </div>
                   <label className="grid gap-1 text-xs font-bold">
                     Filter branch

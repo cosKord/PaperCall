@@ -36,6 +36,18 @@
   select {
     cursor: pointer;
   }
+  button:enabled,
+  .pressable-card {
+    transition-property: translate, scale, filter;
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  button:enabled:active,
+  .pressable-card:has(a:active) {
+    translate: 0 2px !important;
+    scale: 0.985 !important;
+    filter: brightness(0.94) saturate(0.92);
+  }
   :focus-visible {
     outline: 3px solid #f1a14f;
     outline-offset: 3px;
@@ -66,6 +78,56 @@
   height: 100%;
 }
 
+.pixel-reveal {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  overflow: hidden;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.pixel-reveal span {
+  background: #111;
+  border: 1px solid #fffbe8;
+  transition: opacity 0ms linear var(--delay), transform 300ms steps(3, end) var(--delay);
+}
+
+.pixel-reveal span:nth-child(3n) {
+  background: #8b78e6;
+}
+
+.pixel-reveal span:nth-child(5n) {
+  background: #d9ff68;
+}
+
+.pixel-reveal--open {
+  pointer-events: none;
+}
+
+.pixel-reveal--open span {
+  opacity: 0;
+  transform: translate(calc(var(--x) * 10px), calc(var(--y) * 10px)) scale(0.12);
+}
+
+.crt-scanlines {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(17 17 17 / 0.018) 0,
+    rgb(17 17 17 / 0.018) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
 .landing-hero-halftone {
   position: absolute;
   z-index: 0;
@@ -86,6 +148,11 @@
 @media (prefers-reduced-motion: reduce) {
   .landing-hero-halftone {
     animation: none;
+  }
+
+  .pixel-reveal--open span {
+    transition-duration: 0ms;
+    transition-delay: 0ms;
   }
 }
 

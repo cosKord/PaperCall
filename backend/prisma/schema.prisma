@@ -21,6 +21,7 @@ model User {
   username              String?        @unique @db.VarChar(120)
   branch                String?        @db.VarChar(80)
   role                  String         @default("player") @db.VarChar(20)
+  xp                    Int            @default(0)
   active                Boolean        @default(true)
   totpSecret            String?        @map("totp_secret") @db.VarChar(64)
   createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -40,7 +41,6 @@ model ProfileDetail {
   userId       Int      @id @map("user_id")
   fullName     String?  @map("full_name") @db.VarChar(120)
   academicYear String?  @map("academic_year") @db.VarChar(30)
-  avatarPath   String?  @map("avatar_path")
   updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -68,16 +68,6 @@ model Session {
   @@map("sessions")
 }
 
-model LoginCode {
-  email      String   @id @db.VarChar(254)
-  codeHash   String   @map("code_hash") @db.VarChar(64)
-  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
-  attempts   Int      @default(0)
-  lastSentAt DateTime @map("last_sent_at") @db.Timestamptz(3)
-
-  @@map("login_codes")
-}
-
 model Market {
   id                Int                @id @default(autoincrement())
   subject           String             @db.VarChar(120)
@@ -89,14 +79,11 @@ model Market {
   homeBranches      Json               @map("home_branches")
   minStake          Int                @default(1) @map("min_stake")
   awayMinStake      Int                @default(10) @map("away_min_stake")
-  lowCapPct         Int                @default(20) @map("low_cap_pct")
-  highCapPct        Int                @default(40) @map("high_cap_pct")
   status            String             @db.VarChar(20)
   paperPath         String?            @map("paper_path")
   paperHash         String?            @map("paper_hash") @db.VarChar(64)
   settledAt         DateTime?          @map("settled_at") @db.Timestamptz(3)
   legacy            Boolean            @default(false)
-  reviewNeeded      Boolean            @default(false) @map("review_needed")
   branchExams       BranchExam[]
   topics            Topic[]
   ledgerEntries     Ledger[]

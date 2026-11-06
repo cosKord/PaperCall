@@ -1,7 +1,7 @@
-import { badRequest, balance, branches, loadBranches, marketPhase, prisma } from "./lib.js";
+import { badRequest, balance, loadBranches, marketPhase, prisma } from "./lib.js";
 
 export async function createMarket(adminId, body) {
-  await loadBranches();
+  const availableBranches = await loadBranches();
   const subject = String(body.subject || "").trim();
   const startsAt = new Date(body.starts_at);
   const endsAt = new Date(body.ends_at);
@@ -12,7 +12,7 @@ export async function createMarket(adminId, body) {
   if (!subject || !["midsem", "endsem", "other"].includes(body.exam_type) || Number.isNaN(startsAt.valueOf()) || Number.isNaN(endsAt.valueOf()) || endsAt <= startsAt || !homeBranches.length) {
     throw badRequest("Invalid market details");
   }
-  if (homeBranches.some((branch) => !branches.has(branch) || !branchStarts[branch])) {
+  if (homeBranches.some((branch) => !availableBranches.includes(branch) || !branchStarts[branch])) {
     throw badRequest("Every home branch needs an exam schedule");
   }
   const schedules = Object.entries(branchStarts).map(([branch, value]) => ({ branch: branch.trim().toUpperCase(), startsAt: new Date(value) }));
@@ -24,16 +24,14 @@ export async function createMarket(adminId, body) {
   const grantPts = body.grant_pts ?? ({ midsem: 100, endsem: 150, other: 100 })[body.exam_type];
   const minStake = body.min_stake ?? 1;
   const awayMinStake = body.away_min_stake ?? 10;
-  const lowCapPct = body.low_cap_pct ?? 20;
-  const highCapPct = body.high_cap_pct ?? 40;
-  if (!(minStake > 0 && minStake <= awayMinStake && awayMinStake <= grantPts) || ![lowCapPct, highCapPct].every((value) => value >= 1 && value <= 100)) {
+  if (!(minStake > 0 && minStake <= awayMinStake && awayMinStake <= grantPts)) {
     throw badRequest("Invalid stake or grant rules");
   }
   return prisma.$transaction(async (tx) => {
     const market = await tx.market.create({
       data: {
         subject, examType: body.exam_type, startsAt, endsAt, lockoutAt: firstStart, grantPts,
-        homeBranches, minStake, awayMinStake, lowCapPct, highCapPct, status: "draft",
+        homeBranches, minStake, awayMinStake, status: "draft",
         branchExams: { create: schedules },
       },
     });

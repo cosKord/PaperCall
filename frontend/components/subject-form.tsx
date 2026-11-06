@@ -16,7 +16,7 @@ export function SubjectForm({
   defaultBranch?: string;
   onCreated: () => Promise<void>;
 }) {
-  const { branches } = useBranches();
+  const { branches, loaded } = useBranches();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,9 +62,10 @@ export function SubjectForm({
     return (
       <button
         className="mt-8 inline-flex min-h-12 items-center gap-2 border-2 border-ink bg-acid px-4 py-3 font-extrabold text-ink shadow-[4px_4px_0_#111] transition-transform hover:-translate-y-0.5"
+        disabled={!loaded || branches.length === 0}
         onClick={() => setOpen(true)}
       >
-        <Plus /> Add a subject
+        <Plus /> {loaded ? "Add a subject" : "Loading branches…"}
       </button>
     );
   }
@@ -153,10 +154,8 @@ export function SubjectForm({
         </fieldset>
 
         {error && (
-          <p
-            className="m-0 border-2 border-ink bg-[#ffe4df] p-3 font-bold text-danger"
-            role="alert"
-          >
+          <p className="m-0 border-2 border-ink bg-[#ffe4df] p-3 font-bold text-danger"
+            role="alert">
             {error}
           </p>
         )}

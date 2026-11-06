@@ -63,8 +63,8 @@ export async function attachPaper(adminId, marketId, buffer, filename, uploadDir
 
 export async function previewSettlement(adminId, marketId, outcomes) {
   const market = await prisma.market.findUnique({ where: { id: marketId } });
-  if (!market || ["draft", "settled"].includes(market.status) || market.legacy || !market.paperHash || !market.endsAt || new Date() < market.endsAt) {
-    throw badRequest("Wait for exam end and attach its question paper");
+  if (!market || ["draft", "settled"].includes(market.status) || market.legacy || !market.endsAt || new Date() < market.endsAt) {
+    throw badRequest("Wait until the exam ends before previewing settlement");
   }
   const calculated = await calculate(prisma, marketId, outcomes);
   const digest = previewDigest(marketId, market.paperHash, calculated.outcomes, calculated.payouts);
@@ -95,8 +95,12 @@ export async function confirmSettlement(adminId, marketId, digest) {
     for (const [topicId, outcome] of Object.entries(calculated.outcomes)) {
       await tx.topic.update({ where: { id: Number(topicId) }, data: { outcome } });
     }
+    const settledBets = await tx.bet.findMany({ where: { id: { in: Object.keys(calculated.payouts).map(Number) } }, select: { id: true, topicId: true, side: true, userId: true } });
     for (const [betId, payout] of Object.entries(calculated.payouts)) {
       await tx.bet.update({ where: { id: Number(betId) }, data: { payout: payout.amount } });
+      const bet = settledBets.find((item) => item.id === Number(betId));
+      const outcome = calculated.outcomes[String(bet.topicId)];
+      if (outcome !== "void") await tx.user.update({ where: { id: bet.userId }, data: { xp: { increment: bet.side === outcome ? 10 : 2 } } });
       if (payout.amount) {
         await tx.ledger.create({ data: { userId: payout.user_id, marketId, betId: Number(betId), amount: payout.amount, reason: payout.reason, createdAt: now } });
       }

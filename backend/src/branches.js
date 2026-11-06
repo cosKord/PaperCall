@@ -1,4 +1,4 @@
-import { badRequest, branches, notFound, prisma } from "./lib.js";
+import { badRequest, notFound, prisma } from "./lib.js";
 
 export function normalizeBranch(value) {
   return String(value || "")
@@ -23,7 +23,6 @@ export async function createBranch(adminId, rawName) {
       data: { actorId: adminId, action: "create_branch", detail: { branch: name } },
     });
   });
-  branches.add(name);
   return name;
 }
 
@@ -79,8 +78,6 @@ export async function renameBranch(adminId, rawCurrentName, rawNextName) {
     });
   });
 
-  branches.delete(currentName);
-  branches.add(nextName);
   return nextName;
 }
 
@@ -114,6 +111,5 @@ export async function deleteBranch(adminId, rawName) {
     });
   });
 
-  branches.delete(name);
   return { ok: true };
 }

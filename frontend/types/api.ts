@@ -1,6 +1,7 @@
 export type UserRole = "player" | "admin";
 export type MarketStatus = "draft" | "open" | "closed" | "settled";
 export type BetSide = "hit" | "miss";
+export type SettlementOutcome = BetSide | "void";
 
 export interface Me {
   id: number;
@@ -9,8 +10,8 @@ export interface Me {
   role: UserRole;
   branch: string | null;
   balance: number;
+  xp?: number;
   welcome_grant_available?: boolean;
-  avatar_url?: string | null;
   admin_verified: boolean;
 }
 
@@ -23,12 +24,6 @@ export interface WelcomeGrantResponse {
 export interface TimeResponse {
   now: string;
   pilot_admin_code_enabled: boolean;
-}
-
-export interface AuthResponse {
-  ok: boolean;
-  demo_code?: string;
-  needs_branch?: boolean;
 }
 
 export interface MarketSummary {
@@ -51,7 +46,7 @@ export interface Topic {
   title: string;
   tier: "low" | "high";
   my_bet?: MyBet;
-  outcome?: BetSide;
+  outcome?: SettlementOutcome;
   pool?: Record<BetSide, number>;
   max_stake: number;
 }
@@ -98,15 +93,16 @@ export interface SettledBet {
   stake: number;
   payout: number;
   net: number;
-  outcome: BetSide;
+  outcome: SettlementOutcome;
   settled_at: string;
 }
 
 export interface ProfileResponse {
-  user: Pick<Me, "id" | "email" | "branch" | "balance" | "avatar_url"> & {
+  user: Pick<Me, "id" | "email" | "branch" | "balance"> & {
     username: string;
     full_name: string | null;
     academic_year: string | null;
+    xp: number;
   };
   score: number;
   rank: number;

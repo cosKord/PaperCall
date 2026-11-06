@@ -11,13 +11,16 @@ let guardedUser: Me;
 vi.mock("@/components/auth-guard", () => ({
   AuthGuard: ({ children }: { children: (user: Me) => React.ReactNode; }) => <>{children(guardedUser)}</>,
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
 vi.mock("@/lib/api-client", () => ({ apiFetch: vi.fn() }));
 
 const apiMock = vi.mocked(apiFetch);
 const player: Me = { id: 2, email: "alice@somaiya.edu", username: "alice", role: "player", branch: "IT", balance: 80, admin_verified: false };
 const admin: Me = { id: 1, email: "admin@somaiya.edu", username: "admin", role: "admin", branch: null, balance: 0, admin_verified: true };
 const profile: ProfileResponse = {
-  user: { id: 2, email: "alice@somaiya.edu", username: "alice", full_name: "Alice Example", academic_year: "SY", branch: "IT", balance: 80, avatar_url: null },
+  user: { id: 2, email: "alice@somaiya.edu", username: "alice", full_name: "Alice Example", academic_year: "SY", branch: "IT", balance: 80 },
   score: 15,
   rank: 2,
   prediction_count: 7,
@@ -31,14 +34,18 @@ describe("RoomsPage", () => {
   beforeEach(() => {
     guardedUser = player;
     apiMock.mockReset();
-    apiMock.mockResolvedValue([]);
+    apiMock.mockImplementation(async (path) => {
+      if (path === "/api/branches") return ["IT", "CSE", "AIDS", "CSBS", "MECH", "CCE"];
+      if (String(path).startsWith("/api/leaderboard")) return [];
+      return [];
+    });
   });
 
-  it("shows all branch rooms to a player", () => {
+  it("shows all branch rooms to a player", async () => {
     render(<RoomsPage />);
     expect(screen.getByRole("heading", { name: /hi, alice/i })).toBeInTheDocument();
     for (const branch of ["IT", "CSE", "AIDS", "CSBS", "MECH", "CCE"]) {
-      expect(screen.getByRole("link", { name: new RegExp(`open ${branch} room`, "i") })).toBeInTheDocument();
+      expect(await screen.findByRole("link", { name: new RegExp(`open ${branch} room`, "i") })).toBeInTheDocument();
     }
   });
 
@@ -46,6 +53,8 @@ describe("RoomsPage", () => {
     guardedUser = admin;
     apiMock.mockImplementation(async (path) => {
       if (path === "/api/admin/users") return [{ id: 2, email: "alice@somaiya.edu", username: "alice", branch: "IT", active: true, created_at: "2026-11-01T10:00:00+00:00" }];
+      if (path === "/api/branches") return ["IT"];
+      if (String(path).startsWith("/api/leaderboard")) return [];
       if (path === "/api/admin/users/2/profile") return profile;
       return { ok: true };
     });
@@ -66,6 +75,8 @@ describe("RoomsPage", () => {
     guardedUser = admin;
     apiMock.mockImplementation(async (path) => {
       if (path === "/api/admin/users") return [{ id: 2, email: "alice@somaiya.edu", username: "alice", branch: "IT", active: true, created_at: "2026-11-01T10:00:00+00:00" }];
+      if (path === "/api/branches") return ["IT"];
+      if (String(path).startsWith("/api/leaderboard")) return [];
       if (path === "/api/admin/users/2/profile") return profile;
       return { balance: 105 };
     });
@@ -87,7 +98,7 @@ describe("RoomsPage", () => {
     guardedUser = admin;
     apiMock.mockImplementation(async (path) => path === "/api/admin/users"
       ? [{ id: 2, email: "alice@somaiya.edu", username: "alice", branch: "IT", active: true, created_at: "2026-11-01T10:00:00+00:00" }]
-      : { ok: true });
+      : path === "/api/branches" ? ["IT"] : String(path).startsWith("/api/leaderboard") ? [] : { ok: true });
     vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<RoomsPage />);
 

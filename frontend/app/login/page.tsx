@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerE
 import { ArrowLeft, ArrowRight } from "@/components/icons";
 import { BrandName } from "@/components/brand-name";
 import { PageTransition } from "@/components/page-transition";
+import { TapedExamPaper } from "@/components/taped-exam-paper";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
 import { useBranches } from "@/lib/use-branches";
@@ -14,7 +15,6 @@ import { minecraftBold } from "@/lib/fonts";
 import type { Me } from "@/types/api";
 
 type Step = "account" | "branch" | "admin";
-type AccountMode = "sign-in" | "sign-up";
 type SessionExchangeResponse = { ok: true; needs_branch: boolean };
 const promoHeadline = "Will the question you skipped show up?";
 
@@ -22,11 +22,9 @@ const controlClass =
   "w-full border-2 border-ink bg-white px-[13px] py-3 outline-none focus:ring-3 focus:ring-violet/30";
 const actionClass =
   "inline-flex min-h-12 items-center justify-center gap-2.5 border-2 border-ink bg-acid px-[18px] py-[13px] font-extrabold text-ink shadow-[4px_4px_0_#111] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50";
-const secondaryActionClass =
-  "inline-flex min-h-12 items-center justify-center gap-2.5 border-2 border-ink bg-white px-[18px] py-[13px] font-extrabold text-ink transition-colors hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function LoginPage() {
-  const { branches } = useBranches();
+  const { branches, loaded: branchesLoaded } = useBranches();
   const router = useRouter();
   const oauthHandled = useRef(false);
   const promoPanelRef = useRef<HTMLElement | null>(null);
@@ -41,9 +39,6 @@ export default function LoginPage() {
     velocityY: number;
   } | null>(null);
   const [step, setStep] = useState<Step>("account");
-  const [mode, setMode] = useState<AccountMode>("sign-in");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [branch, setBranch] = useState("");
   const [pendingAccessToken, setPendingAccessToken] = useState<string | null>(null);
   const [adminCode, setAdminCode] = useState("");
@@ -54,19 +49,24 @@ export default function LoginPage() {
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (reducedMotion.matches) {
-      setTypedHeadline(promoHeadline);
-      return;
-    }
-
     let character = 0;
-    const typing = window.setInterval(() => {
-      character += 1;
-      setTypedHeadline(promoHeadline.slice(0, character));
-      if (character >= promoHeadline.length) window.clearInterval(typing);
-    }, 58);
+    let typing: number | undefined;
+    const startTyping = window.setTimeout(() => {
+      if (reducedMotion.matches) {
+        setTypedHeadline(promoHeadline);
+        return;
+      }
+      typing = window.setInterval(() => {
+        character += 1;
+        setTypedHeadline(promoHeadline.slice(0, character));
+        if (character >= promoHeadline.length && typing !== undefined) window.clearInterval(typing);
+      }, 58);
+    }, 0);
 
-    return () => window.clearInterval(typing);
+    return () => {
+      window.clearTimeout(startTyping);
+      if (typing !== undefined) window.clearInterval(typing);
+    };
   }, []);
 
   useEffect(() => {
@@ -219,7 +219,6 @@ export default function LoginPage() {
     if (result.needs_branch) {
       setPendingAccessToken(accessToken);
       setStep("branch");
-      setMode("sign-up");
       return;
     }
 
@@ -237,17 +236,20 @@ export default function LoginPage() {
     const isAuthCallback = params.has("code") || params.has("auth") || hashParams.has("access_token");
 
     if (authError) {
-      setError(authError.replaceAll("+", " "));
+      const errorTimer = window.setTimeout(() => setError(authError.replaceAll("+", " ")), 0);
       window.history.replaceState(null, "", "/login");
-      return;
+      return () => window.clearTimeout(errorTimer);
     }
     if (!isAuthCallback || oauthHandled.current) return;
 
     oauthHandled.current = true;
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      setError("Add your Supabase URL and publishable key to frontend/.env.local first.");
-      return;
+      const errorTimer = window.setTimeout(
+        () => setError("Add your Supabase URL and publishable key to frontend/.env.local first."),
+        0,
+      );
+      return () => window.clearTimeout(errorTimer);
     }
 
     void (async () => {
@@ -258,7 +260,7 @@ export default function LoginPage() {
         window.history.replaceState(null, "", "/login");
         if (sessionError) throw sessionError;
         if (!data.session) {
-          setNotice("Your email is verified. Sign in with your email and password to continue.");
+          setNotice("Your sign-in session expired. Continue with Google to sign in again.");
           return;
         }
         await finishAuthentication(data.session.access_token);
@@ -269,45 +271,6 @@ export default function LoginPage() {
       }
     })();
   }, [finishAuthentication]);
-
-  async function authenticate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-
-    try {
-      const supabase = getSupabaseBrowserClient();
-      if (!supabase) throw new Error("Add your Supabase URL and publishable key to frontend/.env.local first.");
-
-      if (mode === "sign-up") {
-        const { data, error: authError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/login` },
-        });
-        if (authError) throw authError;
-        if (!data.session) {
-          setNotice("Check your personal email for the confirmation link, then sign in here.");
-          return;
-        }
-        await finishAuthentication(data.session.access_token);
-        return;
-      }
-
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (authError) throw authError;
-      if (!data.session) throw new Error("Supabase did not return a sign-in session");
-      await finishAuthentication(data.session.access_token);
-    } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Could not sign in");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function signInWithGoogle() {
     setBusy(true);
@@ -381,14 +344,12 @@ export default function LoginPage() {
     ? "Choose your branch."
     : step === "admin"
       ? "One more check."
-      : mode === "sign-up"
-        ? "Create your account."
-        : "Welcome back.";
+      : "Welcome to PaperCall.";
   const copy = step === "branch"
     ? "Choose a branch to finish setting up your account."
     : step === "admin"
       ? "Enter your admin second factor to continue."
-      : "Use a personal email and password, or continue with Google. No college email is required.";
+      : "Continue with Google to create or access your account.";
 
   return (
     <PageTransition>
@@ -403,7 +364,8 @@ export default function LoginPage() {
             <BrandName />
           </Link>
 
-          <div className="my-auto mx-auto w-full max-w-[480px] py-12">
+          <div className="my-auto mx-auto w-full max-w-[576px] py-12">
+            <TapedExamPaper>
             <button className="mb-12 flex items-center gap-2 border-0 bg-transparent p-0 font-bold text-ink-soft" onClick={goBack}>
               <ArrowLeft /> Back
             </button>
@@ -411,76 +373,32 @@ export default function LoginPage() {
             <p className="max-w-[43ch] leading-7 text-ink-soft">{copy}</p>
 
             {step === "account" && (
-              <>
-                <div className="mt-8 grid grid-cols-2 border-2 border-ink p-1">
-                  {(["sign-in", "sign-up"] as const).map((accountMode) => (
-                    <button
-                      key={accountMode}
-                      type="button"
-                      aria-pressed={mode === accountMode}
-                      className={`min-h-10 border-0 px-3 font-bold transition-colors ${mode === accountMode ? "bg-ink text-white" : "bg-transparent text-ink-soft hover:bg-white"}`}
-                      onClick={() => {
-                        setMode(accountMode);
-                        setError(null);
-                        setNotice(null);
-                      }}
-                    >
-                      {accountMode === "sign-in" ? "Sign in" : "Create account"}
-                    </button>
-                  ))}
-                </div>
-
-                <form className="mt-5 grid gap-[18px]" onSubmit={authenticate}>
-                  <label className="grid gap-2 text-sm font-bold">
-                    Personal email
-                    <input
-                      className={controlClass}
-                      type="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="you@example.com"
-                      required
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm font-bold">
-                    Password
-                    <input
-                      className={controlClass}
-                      type="password"
-                      autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-                      minLength={8}
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      required
-                    />
-                    {mode === "sign-up" && <span className="font-normal text-ink-soft">Use at least 8 characters.</span>}
-                  </label>
-                  <button className={actionClass} disabled={busy}>
-                    {busy ? "Please wait…" : mode === "sign-up" ? "Create account" : "Sign in"}
-                    {!busy && <ArrowRight />}
-                  </button>
-                </form>
-
-                <div className="my-5 flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-wider text-ink-soft">
-                  <span className="h-px flex-1 bg-ink/20" /> or <span className="h-px flex-1 bg-ink/20" />
-                </div>
-                <button className={`${secondaryActionClass} w-full`} type="button" onClick={signInWithGoogle} disabled={busy}>
-                  Continue with Google
-                </button>
-              </>
+              <button className={`${actionClass} mt-8 w-full`} type="button" onClick={signInWithGoogle} disabled={busy}>
+                {busy ? "Opening Google…" : "Continue with Google"}
+                {!busy && <ArrowRight />}
+              </button>
             )}
 
             {step === "branch" && (
               <form className="mt-9 grid gap-[18px]" onSubmit={finishBranchSelection}>
                 <label className="grid gap-2 text-sm font-bold">
                   Your branch
-                  <select className={controlClass} value={branch} onChange={(event) => setBranch(event.target.value)} required>
+                  <select
+                    className={controlClass}
+                    value={branch}
+                    onChange={(event) => setBranch(event.target.value)}
+                    disabled={!branchesLoaded || branches.length === 0}
+                    required
+                  >
                     <option value="">Choose branch</option>
                     {branches.map((item) => <option value={item} key={item}>{item}</option>)}
                   </select>
                 </label>
-                <button className={actionClass} disabled={busy}>
+                {!branchesLoaded && <p className="m-0 text-sm text-ink-soft">Loading branches…</p>}
+                {branchesLoaded && branches.length === 0 && (
+                  <p className="m-0 text-sm text-danger">No branches are available. Ask an admin to add one.</p>
+                )}
+                <button className={actionClass} disabled={busy || !branchesLoaded || branches.length === 0}>
                   {busy ? "Creating account…" : <>Finish sign up <ArrowRight /></>}
                 </button>
               </form>
@@ -501,6 +419,7 @@ export default function LoginPage() {
             {notice && <p className="mt-5 border-2 border-ink bg-acid/40 p-3 font-bold text-ink" role="status">{notice}</p>}
             {error && <p className="mt-5 border-2 border-ink bg-[#ffe4df] p-3 font-bold text-[#8f302d]" role="alert">{error}</p>}
             <p className="mt-8 font-mono text-xs text-ink-soft">Virtual points only. No cash value, no real-money wagering.</p>
+            </TapedExamPaper>
           </div>
         </section>
 

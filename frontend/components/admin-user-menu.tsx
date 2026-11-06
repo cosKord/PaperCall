@@ -6,7 +6,7 @@ import { Close, Eye, More, Trash, Wallet } from "@/components/icons";
 import { apiFetch } from "@/lib/api-client";
 import type { AdminUser, ProfileResponse } from "@/types/api";
 
-type PanelMode = "profile" | "balance";
+type PanelMode = "profile" | "balance" | "xp";
 
 const fieldClass =
   "w-full border-2 border-ink bg-white px-3 py-2.5 outline-none focus:ring-3 focus:ring-violet/30";
@@ -140,6 +140,27 @@ export function AdminUserMenu({
     }
   }
 
+  async function setXp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const xp = Number(form.get("xp"));
+    const reason = String(form.get("reason") ?? "").trim();
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(`/api/admin/users/${player.id}/xp-adjustments`, {
+        method: "POST",
+        body: JSON.stringify({ xp, reason }),
+      });
+      setProfile(await apiFetch<ProfileResponse>(`/api/admin/users/${player.id}/profile`));
+      setMessage(`XP set to ${xp}.`);
+      formElement.reset();
+    } catch (setErrorValue) {
+      setError(setErrorValue instanceof Error ? setErrorValue.message : "Could not set XP");
+    }
+  }
+
   async function removeUser() {
     setMenuOpen(false);
     const name = player.username || player.email;
@@ -196,6 +217,9 @@ export function AdminUserMenu({
             >
               <Wallet /> Edit balance
             </button>
+            <button className={menuItemClass} role="menuitem" onClick={() => void openPanel("xp")}>
+              Set XP
+            </button>
             <button
               className={`${menuItemClass} text-danger hover:bg-[#fff0ed]`}
               role="menuitem"
@@ -225,9 +249,7 @@ export function AdminUserMenu({
             <header className="mb-6 flex items-start justify-between gap-4 border-b-2 border-ink pb-5">
               <div>
                 <span className="text-sm font-bold text-ink-soft">
-                  {panelMode === "profile"
-                    ? "Player details"
-                    : "Balance adjustment"}
+                  {panelMode === "profile" ? "Player details" : panelMode === "balance" ? "Balance adjustment" : "Set player XP"}
                 </span>
                 <h2
                   className="mb-0 mt-1 text-2xl font-black"
@@ -291,6 +313,10 @@ export function AdminUserMenu({
                   <>
                     <dl className="grid grid-cols-2 gap-3">
                       <div className="border-2 border-ink bg-paper p-4">
+                        <dt className="text-sm font-bold text-ink-soft">XP</dt>
+                        <dd className="mb-0 mt-1 text-xl font-extrabold">{profile.user.xp}</dd>
+                      </div>
+                      <div className="border-2 border-ink bg-paper p-4">
                         <dt className="text-sm font-bold text-ink-soft">
                           Balance
                         </dt>
@@ -349,8 +375,9 @@ export function AdminUserMenu({
                     >
                       <Wallet /> Adjust balance
                     </button>
+                    <button className="ml-3 mt-6 inline-flex min-h-11 items-center border-2 border-ink bg-[#e7e0ff] px-4 py-2.5 font-bold text-ink" onClick={() => setPanelMode("xp")}>Set XP</button>
                   </>
-                ) : (
+                ) : panelMode === "balance" ? (
                   <>
                     <div className="mb-5 flex items-center justify-between border-2 border-ink bg-paper p-4">
                       <span className="font-bold text-ink-soft">
@@ -391,6 +418,16 @@ export function AdminUserMenu({
                       <button className="min-h-11 justify-self-start border-2 border-ink bg-acid px-4 py-2.5 font-bold text-ink shadow-[3px_3px_0_#111]">
                         Apply adjustment
                       </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-5 flex items-center justify-between border-2 border-ink bg-paper p-4"><span className="font-bold text-ink-soft">Current XP</span><strong className="text-xl">{profile.user.xp}</strong></div>
+                    <form className="grid gap-4" onSubmit={setXp}>
+                      <label className="grid gap-2 text-sm font-bold">New XP total<input className={fieldClass} name="xp" type="number" min="0" max="1000000" step="1" defaultValue={profile.user.xp} required /></label>
+                      <label className="grid gap-2 text-sm font-bold">Reason<textarea className={`${fieldClass} min-h-28 resize-y`} name="reason" rows={4} minLength={3} maxLength={240} placeholder="Why is this XP change needed?" required /></label>
+                      <p className="m-0 text-sm leading-relaxed text-ink-soft">Set the player’s total XP. Every change is recorded in the audit log.</p>
+                      <button className="min-h-11 justify-self-start border-2 border-ink bg-acid px-4 py-2.5 font-bold text-ink shadow-[3px_3px_0_#111]">Save XP</button>
                     </form>
                   </>
                 )}

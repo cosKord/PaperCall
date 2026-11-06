@@ -1,14 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 
+import { AccountMenu } from "@/components/account-menu";
 import { Coins } from "@/components/icons";
 import { BrandName } from "@/components/brand-name";
-import { apiFetch } from "@/lib/api-client";
 import { displayName } from "@/lib/branches";
 import type { Me, WelcomeGrantResponse } from "@/types/api";
+import { apiFetch } from "@/lib/api-client";
 
 const claimCardClass =
   "absolute right-0 top-full z-40 mt-3 w-[min(20rem,calc(100vw-24px))] rounded-xl border-2 border-ink bg-surface p-4 text-ink";
@@ -16,9 +17,11 @@ const claimCardClass =
 export function DashboardHeader({
   user,
   showWelcomeGrant = false,
+  xp,
 }: {
   user: Me;
   showWelcomeGrant?: boolean;
+  xp?: number;
 }) {
   const name = user.username || displayName(user.email);
   const [balanceState, setBalanceState] = useState({
@@ -67,19 +70,16 @@ export function DashboardHeader({
   }
 
   return (
-    <header className="relative z-20 flex min-h-[72px] items-center justify-between gap-5 border-b-2 border-ink bg-paper px-[clamp(18px,5vw,70px)] py-3 text-ink max-sm:min-h-[64px]">
+    <header
+      className="relative z-20 flex min-h-[72px] items-center justify-between gap-5 border-b-2 border-ink bg-[#eee6d8] px-[clamp(18px,5vw,70px)] py-3 text-ink [background-image:linear-gradient(#cbbba6_1px,transparent_1px),linear-gradient(90deg,#cbbba6_1px,transparent_1px)] [background-size:23px_23px] max-sm:min-h-[64px]"
+    >
       <Link
         className="flex items-center gap-2.5 font-black no-underline"
         href="/rooms"
         transitionTypes={["nav-back"]}
         aria-label="PaperCall dashboard"
       >
-        <span
-          className="grid size-[34px] place-items-center border-2 border-ink bg-acid text-ink shadow-[2px_2px_0_#111]"
-          aria-hidden="true"
-        >
-          P
-        </span>
+        <Image className="size-[34px] border-2 border-ink shadow-[2px_2px_0_#111]" src="/images/papercall-logo.png" alt="" width={34} height={34} priority />
         <BrandName />
       </Link>
 
@@ -156,24 +156,7 @@ export function DashboardHeader({
           </div>
         )}
 
-        <Link
-          className="grid size-11 place-items-center overflow-hidden border-2 border-ink bg-[#c8baff] font-black text-ink no-underline transition-transform hover:-translate-y-0.5 max-sm:size-[42px]"
-          href="/profile"
-          transitionTypes={["nav-forward"]}
-          aria-label="Open profile"
-        >
-          {user.avatar_url ? (
-            <Image
-              src={user.avatar_url}
-              alt=""
-              width={48}
-              height={48}
-              unoptimized
-            />
-          ) : (
-            name.charAt(0).toUpperCase()
-          )}
-        </Link>
+        <AccountMenu username={name} xp={xp ?? user.xp} />
       </div>
     </header>
   );

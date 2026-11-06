@@ -2,20 +2,6 @@ import type { ReactNode } from "react";
 
 type ContainerProps = { children: ReactNode };
 
-export function ExamPaperHero({ children }: ContainerProps) {
-  return (
-    <div className="relative isolate border-2 border-ink bg-[#fffdf2] px-[clamp(28px,4vw,54px)] pb-[clamp(28px,4vw,48px)] pt-7 text-ink shadow-[8px_8px_0_#111] -rotate-1 max-sm:px-7">
-      <span aria-hidden="true" className="absolute -top-3 left-[18%] z-10 h-7 w-20 rotate-[-7deg] border border-[#c3b06a]/35 bg-[#f1dc8b]/75 shadow-sm" />
-      <span aria-hidden="true" className="absolute -top-3 right-[15%] z-10 h-7 w-20 rotate-[8deg] border border-[#c3b06a]/35 bg-[#f1dc8b]/75 shadow-sm" />
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-3 border-b border-[#b8b5a7] pb-3 pl-5 font-mono text-[11px] font-bold uppercase tracking-wide text-[#55534e]">
-        <span>NAME: __________</span><span>ROLL NO: ______</span>
-      </div>
-      <span aria-hidden="true" className="absolute right-5 top-[4.2rem] grid size-12 rotate-[-12deg] place-items-center rounded-full border-[3px] border-[#e04a42] font-black text-[#e04a42]">A+</span>
-      {children}
-    </div>
-  );
-}
-
 export function TicketSlipHero({ children }: ContainerProps) {
   return (
     <div className="-rotate-1" style={{ filter: "drop-shadow(10px 14px 12px rgba(17, 17, 17, 0.38))" }}>

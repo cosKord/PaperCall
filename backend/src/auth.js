@@ -1,7 +1,6 @@
 import {
   AppError,
   badRequest,
-  branches,
   forbidden,
   loadBranches,
   prisma,
@@ -29,7 +28,7 @@ export async function createAppSession(accessToken, branch) {
       signal: AbortSignal.timeout(8000),
     });
   } catch {
-    throw new AppError(502, "Could not verify your Supabase session");
+    throw new AppError(502, "Could not verify your session");
   }
 
   if (!identityResponse.ok) throw unauthorized("Your sign-in session has expired. Please sign in again.");
@@ -41,8 +40,8 @@ export async function createAppSession(accessToken, branch) {
   }
 
   const normalizedBranch = branch ? String(branch).trim().toUpperCase() : null;
-  if (normalizedBranch) await loadBranches();
-  if (normalizedBranch && !branches.has(normalizedBranch)) throw badRequest("Choose a valid branch");
+  const availableBranches = normalizedBranch ? await loadBranches() : [];
+  if (normalizedBranch && !availableBranches.includes(normalizedBranch)) throw badRequest("Choose a valid branch");
   const user = await prisma.$transaction(async (tx) => {
     let account = await tx.user.findUnique({ where: { supabaseUserId: authUserId } });
     if (!account) account = await tx.user.findUnique({ where: { email: normalizedEmail } });

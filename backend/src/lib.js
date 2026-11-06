@@ -2,27 +2,13 @@ import crypto from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 export const prisma = new PrismaClient();
-export const branches = new Set(["IT", "CSE", "AIDS", "CSBS", "MECH", "CCE"]);
-
-let branchesLoaded = false;
-let branchesLoading;
 
 export async function loadBranches(db = prisma) {
-  if (branchesLoaded) return [...branches].sort((left, right) => left.localeCompare(right));
-  if (!branchesLoading) {
-    branchesLoading = db.branch.findMany({
-      select: { name: true },
-      orderBy: { name: "asc" },
-    }).then((rows) => {
-      branches.clear();
-      for (const branch of rows) branches.add(branch.name);
-      branchesLoaded = true;
-      return rows.map((branch) => branch.name);
-    }).finally(() => {
-      branchesLoading = undefined;
-    });
-  }
-  return branchesLoading;
+  const rows = await db.branch.findMany({
+    select: { name: true },
+    orderBy: { name: "asc" },
+  });
+  return rows.map((branch) => branch.name);
 }
 
 export class AppError extends Error {
@@ -76,11 +62,3 @@ export function verifyTotp(secret, code, window = 1) {
   return false;
 }
 
-export function serialize(value) {
-  if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value)) return value.map(serialize);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, serialize(item)]));
-  }
-  return value;
-}

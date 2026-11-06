@@ -1,15 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AuthGuard } from "@/components/auth-guard";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { PageTransition } from "@/components/page-transition";
-import { Camera, Flag } from "@/components/icons";
+import { Flag } from "@/components/icons";
+import { RankIcon, rankName } from "@/components/rank-icons";
+import { minecraftBold } from "@/lib/fonts";
 import { apiFetch } from "@/lib/api-client";
-import { useBranches } from "@/lib/use-branches";
 import type { Me, ProfileResponse } from "@/types/api";
 
 const inputClass =
@@ -49,7 +49,6 @@ function groupCallsByExam<
 }
 
 function ProfileContent({ user }: { user: Me }) {
-  const { branches } = useBranches();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [editing, setEditing] = useState(false);
@@ -118,28 +117,6 @@ function ProfileContent({ user }: { user: Me }) {
     }
   }
 
-  async function uploadAvatar(event: FormEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
-    if (!file) return;
-
-    const body = new FormData();
-    body.append("file", file);
-    setError(null);
-    setMessage(null);
-
-    try {
-      await apiFetch("/api/profile/avatar", { method: "POST", body });
-      await load();
-      setMessage("Avatar updated.");
-    } catch (uploadError) {
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Could not upload avatar",
-      );
-    }
-  }
-
   async function submitBug(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -195,13 +172,32 @@ function ProfileContent({ user }: { user: Me }) {
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      <DashboardHeader user={user} />
+      <DashboardHeader user={user} xp={profile.user.xp ?? 0} />
 
       <main className="mx-auto w-[min(1120px,calc(100%-40px))] py-[clamp(38px,7vw,76px)] pb-20">
         <h1 className="mb-8 text-[clamp(2.5rem,5vw,4.5rem)] font-black leading-[.95] tracking-tight">
           Your profile
         </h1>
         <p className="-mt-5 mb-8 text-ink-soft">{profile.user.email}</p>
+
+        {(() => {
+          const xp = profile.user.xp ?? 0;
+          const level = Math.min(Math.floor(xp / 100), 4);
+          const progress = level === 4 ? 100 : xp % 100;
+          return (
+            <section className={`${cardClass} mb-8 p-5`} aria-label="XP level">
+              <h2 className={`${minecraftBold.className} mb-3 mt-0 text-lg font-extrabold`}>Your progress</h2>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h2 className="m-0 text-xl font-extrabold">{rankName(level)}</h2>
+                <span className="font-mono text-sm font-bold">{level + 1}/5 · {xp} XP</span>
+              </div>
+              <div className="h-3 overflow-hidden border border-ink bg-white" role="progressbar" aria-label="Progress to next level" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+                <span className="block h-full bg-acid" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="mb-0 mt-2 text-sm text-ink-soft">{level === 0 ? "Start grinding boy" : level === 4 ? "Top level reached" : `${100 - progress} XP to ${rankName(level + 1)}`}</p>
+            </section>
+          );
+        })()}
 
         {error && (
           <p
@@ -222,39 +218,27 @@ function ProfileContent({ user }: { user: Me }) {
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(260px,.78fr)_minmax(0,1.22fr)]">
           <aside className={`${cardClass} p-[clamp(20px,3vw,30px)]`}>
-            <div className="relative mb-[22px] grid size-[156px] place-items-center overflow-hidden rounded-full bg-[#e6e0ff] text-[2.6rem] font-black text-night">
-              {profile.user.avatar_url ? (
-                <Image
-                  className="size-full object-cover"
-                  src={profile.user.avatar_url}
-                  width={156}
-                  height={156}
-                  unoptimized
-                  alt="Your avatar"
-                />
-              ) : (
-                <span>{initials.toUpperCase()}</span>
-              )}
-              <label
-                className="absolute bottom-1 right-1 grid size-[42px] cursor-pointer place-items-center rounded-full border-[3px] border-surface bg-acid"
-                title="Change avatar"
-              >
-                <Camera />
-                <span className="sr-only">Change avatar</span>
-                <input
-                  className="sr-only"
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.webp"
-                  aria-label="Change avatar"
-                  onChange={uploadAvatar}
-                />
-              </label>
+            <div className="mb-[22px] grid size-[156px] place-items-center rounded-full bg-[#e6e0ff] text-[2.6rem] font-black text-night">
+              <span>{initials.toUpperCase()}</span>
             </div>
 
             {!editing ? (
               <>
-                <h2 className="mb-5 break-words text-2xl font-extrabold">
-                  @{profile.user.username}
+                <h2 className="mb-5 flex flex-wrap items-center gap-2 break-words text-2xl font-extrabold">
+                  <span>@{profile.user.username}</span>
+                  <span className="sr-only">
+                    {[
+                      "Newbie",
+                      "Risk-enjoyer",
+                      "Gamblers spirit",
+                      "Prophet",
+                      "Oracle",
+                    ][Math.min(Math.floor((profile.user.xp ?? 0) / 100), 4)]}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-ink bg-[#e7e0ff] px-1.5 py-1 text-sm font-extrabold leading-none text-[#4e3c9a]">
+                    <RankIcon level={Math.floor((profile.user.xp ?? 0) / 100)} className="size-7 p-1" />
+                    {rankName(Math.floor((profile.user.xp ?? 0) / 100))}
+                  </span>
                 </h2>
                 <dl className="grid gap-4">
                   <div className="grid gap-1">
@@ -309,16 +293,13 @@ function ProfileContent({ user }: { user: Me }) {
                 </label>
                 <label className="grid gap-2 text-sm font-bold">
                   Branch
-                  <select
-                    className={inputClass}
-                    name="branch"
-                    defaultValue={profile.user.branch || ""}
-                    required
-                  >
-                    {branches.map((branch) => (
-                      <option key={branch}>{branch}</option>
-                    ))}
-                  </select>
+                  <input
+                    className={`${inputClass} cursor-not-allowed bg-paper`}
+                    value={profile.user.branch || "Not selected"}
+                    disabled
+                  />
+                  <input name="branch" type="hidden" value={profile.user.branch || ""} />
+                  <span className="text-xs font-normal text-ink-soft">Branch changes are managed by an admin.</span>
                 </label>
                 <label className="grid gap-2 text-sm font-bold">
                   Academic year

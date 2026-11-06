@@ -7,7 +7,7 @@ import { Flag, Lock, Plus, Upload } from "@/components/icons";
 import { MarketSchedule } from "@/components/market-schedule";
 import { PoolDistribution } from "@/components/pool-distribution";
 import { apiFetch } from "@/lib/api-client";
-import type { BetSide, MarketDetail, SettlementPreview } from "@/types/api";
+import type { MarketDetail, SettlementOutcome, SettlementPreview } from "@/types/api";
 
 const inputClass =
   "min-h-11 border-2 border-ink bg-white px-3 py-2 outline-none focus:ring-3 focus:ring-violet/30";
@@ -21,7 +21,7 @@ export function AdminSubject({
   market: MarketDetail;
   onRefresh: () => Promise<void>;
 }) {
-  const [outcomes, setOutcomes] = useState<Record<number, BetSide | "">>(() =>
+  const [outcomes, setOutcomes] = useState<Record<number, SettlementOutcome | "">>(() =>
     Object.fromEntries(
       market.topics.map((topic) => [topic.id, topic.outcome ?? ""]),
     ),
@@ -97,7 +97,7 @@ export function AdminSubject({
 
   async function previewSettlement() {
     if (!allSelected)
-      return setError("Select Hit or Miss for every market first.");
+      return setError("Select Hit, Miss, or Void for every market first.");
     setError(null);
     setMessage(null);
     try {
@@ -215,13 +215,14 @@ export function AdminSubject({
                     setPreview(null);
                     setOutcomes((current) => ({
                       ...current,
-                      [topic.id]: event.target.value as BetSide,
+                      [topic.id]: event.target.value as SettlementOutcome,
                     }));
                   }}
                 >
                   <option value="">Outcome</option>
                   <option value="hit">Hit</option>
                   <option value="miss">Miss</option>
+                  <option value="void">Void-refund all bets</option>
                 </select>
               ) : (
                 <span className="rounded-full bg-white px-3 py-2 text-sm font-bold">

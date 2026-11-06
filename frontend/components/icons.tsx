@@ -38,28 +38,11 @@ export function ArrowLeft(props: IconProps) {
   );
 }
 
-export function ChevronDown(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path d="m7 10 5 5 5-5" />
-    </IconBase>
-  );
-}
-
 export function Coins(props: IconProps) {
   return (
     <IconBase {...props}>
       <ellipse cx="12" cy="7" rx="7" ry="3" />
       <path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5" />
-    </IconBase>
-  );
-}
-
-export function Camera(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path d="M14.5 5 13 3h-2L9.5 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4.5Z" />
-      <circle cx="12" cy="12" r="3.5" />
     </IconBase>
   );
 }

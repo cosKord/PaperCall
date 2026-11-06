@@ -64,7 +64,7 @@ describe("RoomPage", () => {
     });
     render(<RoomPage />);
     expect(await screen.findByText(/outcome: miss/i)).toBeInTheDocument();
-    expect(screen.getByText(/pool: hit 20 · miss 10/i)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /hit 20 points.*miss 10 points/i })).toBeInTheDocument();
     expect(screen.getByText(/net: -20 pts/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /question paper/i })).toHaveAttribute("href", "/api/markets/5/paper");
   });
@@ -76,7 +76,7 @@ describe("RoomPage", () => {
     await user.selectOptions(screen.getByLabelText(/prediction for ias machine/i), "miss");
     await user.clear(screen.getByLabelText(/stake for ias machine/i));
     await user.type(screen.getByLabelText(/stake for ias machine/i), "12");
-    await user.click(screen.getByRole("button", { name: /place final bet on ias machine/i }));
+    await user.click(screen.getByRole("button", { name: /place call on ias machine/i }));
 
     expect(apiMock).toHaveBeenCalledWith("/api/bets", {
       method: "POST",
@@ -88,10 +88,7 @@ describe("RoomPage", () => {
     guardedUser = { ...player, role: "admin", admin_verified: true };
     render(<RoomPage />);
     expect(await screen.findByRole("heading", { name: /admin controls/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /add topic/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /publish room/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /lock betting now/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /lock calls now/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /upload paper/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /preview settlement/i })).toBeInTheDocument();
   });
 });

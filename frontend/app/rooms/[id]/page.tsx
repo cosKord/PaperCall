@@ -1,132 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { AuthGuard } from "@/components/auth-guard";
+import { BetForm } from "@/components/bet-form";
 import { AdminSubject } from "@/components/admin-subject";
 import { Countdown } from "@/components/countdown";
 import { DashboardHeader } from "@/components/dashboard-header";
+import { PageNavbar } from "@/components/page-navbar";
 import { MarketSchedule } from "@/components/market-schedule";
 import { PayoutEstimate } from "@/components/payout-estimate";
 import { PoolDistribution } from "@/components/pool-distribution";
 import { PageTransition } from "@/components/page-transition";
 import { apiFetch } from "@/lib/api-client";
-import type {
-  BetSide,
-  MarketDetail,
-  Me,
-  TimeResponse,
-  Topic,
-} from "@/types/api";
-
-const buttonClass =
-  "inline-flex min-h-11 items-center justify-center border-2 border-ink bg-acid px-3.5 py-2.5 font-extrabold text-ink shadow-[3px_3px_0_#111] disabled:cursor-not-allowed disabled:opacity-50";
-const fieldClass =
-  "min-h-11 w-full border-2 border-ink bg-white px-3 py-2.5 text-ink outline-none focus:ring-3 focus:ring-violet/30";
-
-function BetForm({
-  topic,
-  onPlaced,
-}: {
-  topic: Topic;
-  onPlaced: () => Promise<void>;
-}) {
-  const [side, setSide] = useState<BetSide>(topic.my_bet?.side ?? "hit");
-  const [stake, setStake] = useState(topic.my_bet?.stake ?? 1);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-
-    try {
-      await apiFetch("/api/bets", {
-        method: "POST",
-        body: JSON.stringify({
-          topic_id: topic.id,
-          side,
-          stake: Number(stake),
-        }),
-      });
-      await onPlaced();
-    } catch (betError) {
-      setError(
-        betError instanceof Error ? betError.message : "Could not submit call",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form
-      className="mt-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(120px,.7fr)_auto]"
-      onSubmit={submit}
-    >
-      <label
-        className="grid gap-1.5 text-sm font-bold"
-        htmlFor={`side-${topic.id}`}
-      >
-        Prediction
-        <select
-          className={fieldClass}
-          id={`side-${topic.id}`}
-          aria-label={`Prediction for ${topic.title}`}
-          value={side}
-          onChange={(event) => setSide(event.target.value as BetSide)}
-        >
-          <option value="hit">YES / Hit</option>
-          <option value="miss">NO / Miss</option>
-        </select>
-      </label>
-      <label
-        className="grid gap-1.5 text-sm font-bold"
-        htmlFor={`stake-${topic.id}`}
-      >
-        Stake
-        <input
-          className={fieldClass}
-          id={`stake-${topic.id}`}
-          aria-label={`Stake for ${topic.title}`}
-          type="number"
-          min="1"
-          step="1"
-          value={stake}
-          onChange={(event) => setStake(Number(event.target.value))}
-          required
-        />
-      </label>
-      <div className="sm:col-span-3">
-        <PayoutEstimate pool={topic.pool} side={side} stake={stake} />
-      </div>
-      <button
-        className={buttonClass}
-        aria-label={`Submit call on ${topic.title}`}
-        disabled={busy}
-      >
-        {busy ? "Submitting…" : "Submit call"}
-      </button>
-      {error && (
-        <p
-          className="m-0 text-sm font-bold text-danger sm:col-span-3"
-          role="alert"
-        >
-          {error}
-        </p>
-      )}
-    </form>
-  );
-}
+import type { MarketDetail, Me, TimeResponse } from "@/types/api";
 
 function RoomContent({ user, marketId }: { user: Me; marketId: number }) {
   const [market, setMarket] = useState<MarketDetail | null>(null);
   const [serverNow, setServerNow] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -156,20 +50,6 @@ function RoomContent({ user, marketId }: { user: Me; marketId: number }) {
     const timer = window.setInterval(() => void load(), 5000);
     return () => window.clearInterval(timer);
   }, [load, market?.status]);
-
-  async function action(path: string, success: string) {
-    setError(null);
-    setMessage(null);
-    try {
-      await apiFetch(path, { method: "POST", body: JSON.stringify({}) });
-      setMessage(success);
-      await load();
-    } catch (actionError) {
-      setError(
-        actionError instanceof Error ? actionError.message : "Action failed",
-      );
-    }
-  }
 
   if (!market) {
     return (
@@ -203,13 +83,7 @@ function RoomContent({ user, marketId }: { user: Me; marketId: number }) {
       <DashboardHeader user={user} />
 
       <div className="mt-6">
-        <Link
-          className="inline-flex items-center gap-2 font-bold text-ink-soft no-underline hover:text-ink"
-          href="/rooms"
-          transitionTypes={["nav-back"]}
-        >
-          ← All rooms
-        </Link>
+        <PageNavbar />
       </div>
 
       <div className="my-8 flex items-end justify-between gap-6 max-sm:flex-col max-sm:items-start">
@@ -235,14 +109,6 @@ function RoomContent({ user, marketId }: { user: Me; marketId: number }) {
           role="alert"
         >
           {error}
-        </p>
-      )}
-      {message && (
-        <p
-          className="border-2 border-ink bg-acid/50 p-3 font-bold text-ink"
-          role="status"
-        >
-          {message}
         </p>
       )}
 
@@ -314,7 +180,7 @@ function RoomContent({ user, marketId }: { user: Me; marketId: number }) {
                 </div>
               )}
               {market.status === "open" && (
-                <BetForm topic={topic} onPlaced={load} />
+                <BetForm topic={topic} balance={user.balance} onPlaced={load} />
               )}
               {market.status === "closed" && !topic.my_bet && (
                 <p className="mb-0 border-2 border-ink bg-[#e7e0ff] p-3 text-sm font-bold text-ink">
