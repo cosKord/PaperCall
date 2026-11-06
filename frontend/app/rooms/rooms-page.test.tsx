@@ -20,7 +20,7 @@ const apiMock = vi.mocked(apiFetch);
 const player: Me = { id: 2, email: "alice@somaiya.edu", username: "alice", role: "player", branch: "IT", balance: 80, admin_verified: false };
 const admin: Me = { id: 1, email: "admin@somaiya.edu", username: "admin", role: "admin", branch: null, balance: 0, admin_verified: true };
 const profile: ProfileResponse = {
-  user: { id: 2, email: "alice@somaiya.edu", username: "alice", full_name: "Alice Example", academic_year: "SY", branch: "IT", balance: 80 },
+  user: { id: 2, email: "alice@somaiya.edu", username: "alice", full_name: "Alice Example", academic_year: "SY", branch: "IT", balance: 80, xp: 0 },
   score: 15,
   rank: 2,
   prediction_count: 7,
